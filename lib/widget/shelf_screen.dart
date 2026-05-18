@@ -7,6 +7,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:bookshelf/data/models/book.dart';
+import 'package:uuid/uuid.dart';
 
 class ShelfScreen extends ConsumerWidget {
   const ShelfScreen({super.key});
@@ -28,7 +30,21 @@ class ShelfScreen extends ConsumerWidget {
     final destPath = '${appDir.path}/$filename';
 
     await File(sourcePath).copy(destPath);
-    await File(sourcePath).copy(destPath);
+
+    final newBook = Book(
+      bookId: const Uuid().v4(),
+      title: filename.replaceAll(RegExp(r'\.pdf$', caseSensitive: false), ''),
+      author: 'Unknown Author',
+      filepath: destPath,
+      spineColor: Colors.primaries[DateTime.now().second % Colors.primaries.length].value,
+      lastPageRead: 0,
+      totalPages: 0,
+      isArchived: false,
+      addedAt: DateTime.now(),
+    );
+
+    await ref.read(bookRepositoryProvider).addBook(newBook);
+    ref.invalidate(booksProvider);
   }
   @override
   Widget build(BuildContext context, WidgetRef ref) {
