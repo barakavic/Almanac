@@ -44,17 +44,17 @@ Map<String, dynamic> toMap(){
 
 factory Book.fromMap(Map<String, dynamic> map){
   return Book(
-    bookId: map['bookId'] ?? '', 
+    bookId: map['bookid'] ?? '', 
     title: map['title'] ?? '', 
     author: map['author']?? '', 
     filepath: map['filepath']?? '', 
-    spineColor:map['spineColor']?? 0, 
-    genreId:map['genreId'], 
-    subgenreId:map['subgenreId'], 
-    lastPageRead:map['lastPageRead']?? 0, 
-    totalPages:map['totalPages']?? 0, 
-    isArchived:map['isArchived'] == 1, 
-    addedAt:DateTime.parse(map['addedAt']));
+    spineColor:map['spinecolor']?? 0, 
+    genreId:map['genreid'], 
+    subgenreId:map['subgenreid'], 
+    lastPageRead:map['lastpageread']?? 0, 
+    totalPages:map['totalpages']?? 0, 
+    isArchived:map['isarchived'] == 1, 
+    addedAt:DateTime.parse(map['addedat']));
 }
 
 }
