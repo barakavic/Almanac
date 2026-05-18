@@ -68,7 +68,7 @@ class ShelfScreen extends ConsumerWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // Render books that belong to a specific genre
+                      
                       for (final genre in genres) ...[
                         GenreDivider(genre: genre),
                         const SizedBox(width: 8),
@@ -82,14 +82,14 @@ class ShelfScreen extends ConsumerWidget {
                             child: BookSpine(
                               book: book,
                               onTap: () {
-                                // Navigate to reader
+                                
                               },
                             ),
                           );
                         }),
                       ],
                       
-                      // Render books that do not have a genre
+                      
                       ...books
                           .where((book) =>
                               book.genreId == null && !book.isArchived)
@@ -99,7 +99,7 @@ class ShelfScreen extends ConsumerWidget {
                           child: BookSpine(
                             book: book,
                             onTap: () {
-                              // Navigate to reader
+                              
                             },
                           ),
                         );
