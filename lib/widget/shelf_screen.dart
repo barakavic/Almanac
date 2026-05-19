@@ -14,7 +14,16 @@ import 'package:uuid/uuid.dart';
 class ShelfScreen extends ConsumerStatefulWidget {
   const ShelfScreen({super.key});
 
-  Future<void> _importBook(WidgetRef ref)async{
+  @override
+  ConsumerState<ShelfScreen> createState() => _ShelfScreenState();
+
+  
+  
+}
+class _ShelfScreenState extends ConsumerState<ShelfScreen>{
+  bool _isGridView = false;
+
+   Future<void> _importBook()async{
     try{
     final result = await FilePicker.pickFiles(
       type: FileType.custom,
@@ -51,16 +60,39 @@ class ShelfScreen extends ConsumerStatefulWidget {
   }
   catch(e,st){
     appLogger.e('Failed to import book', error: e, stackTrace: st);
-    rethrow;
+    if (mounted){
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to import book'))
+      );
+    }
     
   }
   }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final bookAsync = ref.watch(booksProvider);
     final genreAsync = ref.watch(genreProvider);
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Almanack'
+        ),
+        actions: [
+          IconButton(onPressed: (){
+            setState(() {
+              _isGridView = !_isGridView;
+              
+            });
+          }, icon: Icon(_isGridView?
+          Icons.view_agenda:
+          Icons.grid_view
+          ),
+
+          ),
+        ],
+      ),
       body: bookAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error, $err')),
@@ -121,15 +153,13 @@ class ShelfScreen extends ConsumerStatefulWidget {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _importBook(ref),
+        onPressed: () => _importBook(),
         tooltip: 'Import Book',
         child: const Icon(Icons.add),
       ),
     );
   }
-  
-}
-class _ShelfScreenState extends ConsumerState<ShelfScreen>{
+   
   
 }
 
