@@ -34,8 +34,8 @@ class _BookSpineState extends State<BookSpine>{
     }),
     onTap: widget.onTap,
     child: AnimatedContainer(
-      duration: Duration(milliseconds: 200),
-      curve: Curves.elasticInOut,
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.elasticOut,
       transform: Matrix4.translationValues(0, isPulled ? -16 : 0, 0),
       child: SizedBox(
         width: 52,
@@ -49,7 +49,7 @@ class _BookSpineState extends State<BookSpine>{
                   borderRadius: BorderRadius.circular(4),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
+                      color: Colors.black.withValues(alpha: 0.2),
                       blurRadius: 4,
                       offset: const Offset(2,2)
                     ),
@@ -89,9 +89,10 @@ class _BookSpineState extends State<BookSpine>{
                 borderRadius: BorderRadius.circular(2),
                 child: LinearProgressIndicator(
                   value: progress,
-                  backgroundColor: Colors.white.withOpacity(0.2),
+                  backgroundColor: Colors.white.withValues(alpha: 0.2),
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    Colors.white.withOpacity(0.8),
+                    Theme.of(context).progressIndicatorTheme.color 
+                    ?? Theme.of(context).colorScheme.primary
                     
                   ),
                   minHeight: 3,

@@ -13,9 +13,9 @@ class GenreDivider extends StatelessWidget{
       height: 220,
       child: Container(
         decoration: BoxDecoration(
-          color: Color(0xFF2C2C2C),
+          color: Theme.of(context).dividerColor,
           borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: Colors.white10,
+          border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
           width: 0.5
           ),
 
@@ -30,7 +30,7 @@ class GenreDivider extends StatelessWidget{
             maxLines: 1,
             style: const TextStyle(
               color: Colors.white70,
-              fontSize: 70,
+              fontSize: 9,
               fontWeight: FontWeight.bold,
               letterSpacing: 4.0
             ),

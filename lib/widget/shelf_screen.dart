@@ -11,7 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:bookshelf/data/models/book.dart';
 import 'package:uuid/uuid.dart';
 
-class ShelfScreen extends ConsumerWidget {
+class ShelfScreen extends ConsumerStatefulWidget {
   const ShelfScreen({super.key});
 
   Future<void> _importBook(WidgetRef ref)async{
@@ -127,6 +127,9 @@ class ShelfScreen extends ConsumerWidget {
       ),
     );
   }
+  
+}
+class _ShelfScreenState extends ConsumerState<ShelfScreen>{
   
 }
 

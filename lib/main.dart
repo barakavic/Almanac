@@ -16,6 +16,8 @@ class MyApp extends StatelessWidget{
     return MaterialApp(
       title: 'Bookshelf',
       theme: AppTheme.darkMode,
+      darkTheme: AppTheme.darkMode,
+      themeMode: ThemeMode.system,
       home: const ShelfScreen(),
 
     );
