@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:bookshelf/data/models/genre.dart';
 import 'package:bookshelf/data/providers.dart';
 import 'package:bookshelf/utils/app_logger.dart';
 import 'package:bookshelf/widget/genre_divider.dart';
@@ -22,6 +23,109 @@ class ShelfScreen extends ConsumerStatefulWidget {
 }
 class _ShelfScreenState extends ConsumerState<ShelfScreen>{
   bool _isGridView = false;
+
+    Widget _buildUnassignedSection(List<Book> allBooks) {
+    final unassignedBooks = allBooks.where((b) => b.genreId == null && !b.isArchived).toList();
+    
+    if (unassignedBooks.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          child: Text("Unsorted Books", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        ),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Row(
+            children: unassignedBooks.map((book) {
+              return Padding(
+                padding: const EdgeInsets.only(right: 16.0),
+                child: BookSpine(book: book, onTap: () {}),
+              );
+            }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
+
+      Widget _buildCurrentlyReadingSection(List<Book> allBooks){
+        final currentlyReading = allBooks.where((b)=>b.lastPageRead > 0 && !b.isArchived).toList();
+
+        if (currentlyReading.isEmpty)
+          return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(padding: EdgeInsetsGeometry.symmetric(
+              horizontal: 24, vertical: 16
+            ),
+            child: Text('Currently Reading',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold
+            ),
+            ),
+            
+            ),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                
+              ),
+              child: Row(
+                children: currentlyReading.map((book){
+                  return Padding(padding: const EdgeInsets.only(right: 16.0),
+                  child: BookSpine(book: book, onTap: (){
+
+                  }),
+                  );
+                }).toList(),
+              ),
+            )
+            
+          ],
+        );
+      }
+
+    Widget _buildGenreSection(Genre genre, List<Book> allBooks){
+      final genreBooks = allBooks.where((b)=> b.genreId 
+      == genre.genreId && !b.isArchived
+      ).toList();
+      if (genreBooks.isEmpty) return const SizedBox.shrink();
+
+      return SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(
+          horizontal: 24, vertical: 16
+        ),
+        child: Row(
+          children: [
+            GenreDivider(genre: genre),
+            const SizedBox(width: 16,),
+            ...genreBooks.map((book){
+
+              return Padding(padding: EdgeInsetsGeometry.only(
+                right: 16.0
+              ),
+              child: BookSpine(book: book, onTap: (){
+
+
+              }
+              
+              ),
+              );
+            })
+          ],
+        ),
+      );
+
+    }
 
    Future<void> _importBook()async{
     try{
@@ -102,51 +206,14 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
             error: (err, stack) => Center(child: Text('Error, $err')),
             data: (genres) {
               return Center(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      
-                      for (final genre in genres) ...[
-                        GenreDivider(genre: genre),
-                        const SizedBox(width: 8),
-                        ...books
-                            .where((book) =>
-                                book.genreId == genre.genreId &&
-                                !book.isArchived)
-                            .map((book) {
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8.0),
-                            child: BookSpine(
-                              book: book,
-                              onTap: () {
-                                
-                              },
-                            ),
-                          );
-                        }),
-                      ],
-                      
-                      
-                      ...books
-                          .where((book) =>
-                              book.genreId == null && !book.isArchived)
-                          .map((book) {
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 8.0),
-                          child: BookSpine(
-                            book: book,
-                            onTap: () {
-                              
-                            },
-                          ),
-                        );
-                      }),
-                    ],
-                  ),
-                ),
+                child: ListView(
+                  children: [
+                    _buildCurrentlyReadingSection(books),
+                    for (final genre in genres)
+                    _buildGenreSection(genre, books),
+                    _buildUnassignedSection(books),
+                  ],
+                )
               );
             },
           );
