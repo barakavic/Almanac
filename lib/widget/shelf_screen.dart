@@ -52,7 +52,6 @@ class ShelfScreen extends ConsumerWidget {
     final genreAsync = ref.watch(genreProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A1A),
       body: bookAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error, $err')),

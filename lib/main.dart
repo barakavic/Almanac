@@ -1,3 +1,4 @@
+import 'package:bookshelf/theme/app_theme.dart';
 import 'package:bookshelf/widget/shelf_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,10 +15,7 @@ class MyApp extends StatelessWidget{
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Bookshelf',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-
-      ),
+      theme: AppTheme.darkMode,
       home: const ShelfScreen(),
 
     );
