@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:bookshelf/data/providers.dart';
+import 'package:bookshelf/utils/app_logger.dart';
 import 'package:bookshelf/widget/genre_divider.dart';
 import 'package:bookshelf/widget/book_spine.dart';
 import 'package:file_picker/file_picker.dart';
@@ -14,12 +15,14 @@ class ShelfScreen extends ConsumerWidget {
   const ShelfScreen({super.key});
 
   Future<void> _importBook(WidgetRef ref)async{
+    try{
     final result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['pdf']
       
     );
     if (result == null){
+      appLogger.w("User canceled file picker");
       return;
     }
     final sourcePath = result.files.single.path!;
@@ -45,6 +48,12 @@ class ShelfScreen extends ConsumerWidget {
 
     await ref.read(bookRepositoryProvider).addBook(newBook);
     ref.invalidate(booksProvider);
+  }
+  catch(e,st){
+    appLogger.e('Failed to import book', error: e, stackTrace: st);
+    rethrow;
+    
+  }
   }
   @override
   Widget build(BuildContext context, WidgetRef ref) {

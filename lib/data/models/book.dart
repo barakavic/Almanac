@@ -1,4 +1,6 @@
 
+import 'package:bookshelf/utils/app_logger.dart';
+
 class Book{
   final String bookId;
   final String title;
@@ -27,6 +29,7 @@ class Book{
 );
 
 Map<String, dynamic> toMap(){
+  
   return {
     'bookId': bookId,
     'title': title,
@@ -40,9 +43,12 @@ Map<String, dynamic> toMap(){
     'isArchived': isArchived ? 1: 0,
     'addedAt': addedAt.toIso8601String(),
   };
+  
 }
 
 factory Book.fromMap(Map<String, dynamic> map){
+  
+  try{
   return Book(
     bookId: map['bookid'] ?? '', 
     title: map['title'] ?? '', 
@@ -56,7 +62,11 @@ factory Book.fromMap(Map<String, dynamic> map){
     isArchived:map['isarchived'] == 1, 
     addedAt:DateTime.parse(map['addedat']));
 }
-
+catch(e,st){
+  appLogger.e('failed to parse Book. Map $map', error: e, stackTrace: st);
+  rethrow;
+}
+}
 }
 
 

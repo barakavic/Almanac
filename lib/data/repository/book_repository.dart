@@ -1,5 +1,6 @@
 import 'package:bookshelf/data/database/db_helper.dart';
 import 'package:bookshelf/data/models/book.dart';
+import 'package:bookshelf/utils/app_logger.dart';
 import 'package:sqflite/sqlite_api.dart';
 
 class BookRepository {
@@ -7,21 +8,33 @@ class BookRepository {
   BookRepository(this._db);
 
   Future<void> addBook(Book book) async { 
+    try{
     final db = await _db.database;
     await db.insert('books',
      book.toMap(),
      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    }
+    catch(e,st){
+      appLogger.e('Failed to add book', error: e, stackTrace: st);
+      rethrow;
+    }
      
-     );
 
    }
   Future<List<Book>> getAllBooks() async{ 
+    try{
     final db = await _db.database;
     final List<Map<String, dynamic>> rows = await db.query('books');
     return rows.map((row) => Book.fromMap(row)).toList();
-
+    }
+    catch(e, st){
+      appLogger.e('Failed to retrieve books', error: e, stackTrace: st);
+      rethrow;
+    }
   }
   Future<void> updateBook(String bookid, int page) async{ 
+    try{
     final db = await _db.database;
     await db.update('books', 
     {'lastPageRead': page},
@@ -29,23 +42,38 @@ class BookRepository {
     whereArgs: [bookid]
     
     );
+    }
+    catch(e,st){
+      appLogger.e('Failed to update book', error: e, stackTrace: st);
+      rethrow;
+    }
   }
   Future<void> archiveBook(String bookid) async { 
-    final db = await _db.database;
+    try{final db = await _db.database;
     await db.update(
       'books',
       {'isArchived': 1},
       where: 'bookId = ?',
       whereArgs: [bookid],
-    );
+    );}
+    catch(e,st){
+      appLogger.e('Failed to archive book', error: e, stackTrace: st);
+      rethrow;
+    }
   } 
 
   Future<void> deleteBook(String bookid) async {
+    try{
     final db = await _db.database;
     await db.delete('books', 
     where: 'bookid = ?', 
     whereArgs: [bookid],
     );
+    }
+    catch(e,st){
+      appLogger.e('Failed to delete book', error: e, stackTrace: st);
+      rethrow;
+    }
   }
 
 }
