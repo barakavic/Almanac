@@ -61,7 +61,7 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Padding(padding: EdgeInsetsGeometry.symmetric(
+            const Padding(padding: EdgeInsets.symmetric(
               horizontal: 24, vertical: 16
             ),
             child: Text('Currently Reading',
@@ -110,7 +110,7 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
             const SizedBox(width: 16,),
             ...genreBooks.map((book){
 
-              return Padding(padding: EdgeInsetsGeometry.only(
+              return Padding(padding: EdgeInsets.only(
                 right: 16.0
               ),
               child: BookSpine(book: book, onTap: (){
