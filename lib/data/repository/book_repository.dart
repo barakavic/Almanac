@@ -53,7 +53,7 @@ class BookRepository {
     await db.update(
       'books',
       {'isArchived': 1},
-      where: 'bookId = ?',
+      where: 'bookid = ?',
       whereArgs: [bookid],
     );}
     catch(e,st){

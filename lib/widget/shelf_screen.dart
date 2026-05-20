@@ -180,7 +180,7 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
     await File(sourcePath).copy(destPath);
 
     final newBook = Book(
-      bookId: const Uuid().v4(),
+      bookid: const Uuid().v4(),
       title: filename.replaceAll(RegExp(r'\.pdf$', caseSensitive: false), ''),
       author: 'Unknown Author',
       filepath: destPath,

@@ -2,7 +2,7 @@
 import 'package:bookshelf/utils/app_logger.dart';
 
 class Book{
-  final String bookId;
+  final String bookid;
   final String title;
   final String author;
   final String filepath;
@@ -15,7 +15,7 @@ class Book{
   final DateTime addedAt;
 
   const Book(
-{ required this.bookId,
+{ required this.bookid,
   required this.title,
   required this.author,
   required this.filepath,
@@ -31,7 +31,7 @@ class Book{
 Map<String, dynamic> toMap(){
   
   return {
-    'bookId': bookId,
+    'bookid': bookid,
     'title': title,
     'author': author,
     'filepath': filepath,
@@ -50,7 +50,7 @@ factory Book.fromMap(Map<String, dynamic> map){
   
   try{
   return Book(
-    bookId: map['bookid'] ?? '', 
+    bookid: map['bookid'] ?? '', 
     title: map['title'] ?? '', 
     author: map['author']?? '', 
     filepath: map['filepath']?? '', 
