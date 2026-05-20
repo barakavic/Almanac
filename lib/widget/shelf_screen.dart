@@ -99,7 +99,33 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
       ).toList();
       if (genreBooks.isEmpty) return const SizedBox.shrink();
 
-      return SingleChildScrollView(
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          GestureDetector(
+            onTap: () => {},
+            child: Padding(padding: EdgeInsets.symmetric(
+              horizontal: 24, vertical: 16
+
+            ),
+            child: Row(
+              children: [
+                Text(genre.name, 
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold
+                ),
+                ),
+                const SizedBox(
+                  width: 8,
+                ),
+                const Icon(Icons.chevron_right, size: 20,),
+
+              ],
+            ),
+            ),
+          ),
+          SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(
           horizontal: 24, vertical: 16
@@ -109,22 +135,28 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
             GenreDivider(genre: genre),
             const SizedBox(width: 16,),
             ...genreBooks.map((book){
-
+// 
               return Padding(padding: EdgeInsets.only(
                 right: 16.0
               ),
               child: BookSpine(book: book, onTap: (){
-
-
+// 
+// 
               }
-              
+              // 
               ),
               );
             })
           ],
         ),
+      ),
+        ],
       );
 
+      
+
+/*       return 
+ */
     }
 
    Future<void> _importBook()async{
@@ -186,7 +218,9 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
         actions: [
           IconButton(onPressed: (){
             setState(() {
-              _isGridView = !_isGridView;
+              _isGridView = !_isGridView
+              
+              ;
               
             });
           }, icon: Icon(_isGridView?
@@ -201,6 +235,9 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error, $err')),
         data: (books) {
+          if (_isGridView){
+            return const Center(child: Text('Grid view is coming soon'),);
+          }
           return genreAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (err, stack) => Center(child: Text('Error, $err')),
