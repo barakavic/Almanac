@@ -5,6 +5,7 @@ import 'package:bookshelf/data/providers.dart';
 import 'package:bookshelf/utils/app_logger.dart';
 import 'package:bookshelf/widget/genre_divider.dart';
 import 'package:bookshelf/widget/book_spine.dart';
+import 'package:bookshelf/widget/pdf_reader_screen.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -43,7 +44,11 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
             children: unassignedBooks.map((book) {
               return Padding(
                 padding: const EdgeInsets.only(right: 16.0),
-                child: BookSpine(book: book, onTap: () {}),
+                child: BookSpine(book: book, onTap: () {
+                  Navigator.push(context, 
+                  MaterialPageRoute(builder: (_) => PdfReaderScreen(book: book)) 
+                  );
+                }),
               );
             }).toList(),
           ),
@@ -82,6 +87,7 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
                 children: currentlyReading.map((book){
                   return Padding(padding: const EdgeInsets.only(right: 16.0),
                   child: BookSpine(book: book, onTap: (){
+                    Navigator.push(context, MaterialPageRoute(builder: (_)=> PdfReaderScreen(book: book)));
 
                   }),
                   );
@@ -103,7 +109,7 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           GestureDetector(
-            onTap: () => {},
+            onTap: () {},
             child: Padding(padding: EdgeInsets.symmetric(
               horizontal: 24, vertical: 16
 
@@ -140,6 +146,10 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
                 right: 16.0
               ),
               child: BookSpine(book: book, onTap: (){
+                Navigator.push(context, 
+                MaterialPageRoute(builder: (_)=> PdfReaderScreen(book: book)
+                ),
+                );
 // 
 // 
               }
