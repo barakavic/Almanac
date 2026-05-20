@@ -1,26 +1,26 @@
 
 
 class Subgenre {
-  final String subGenreId;
-  final String subGenreName;
-  final String genreId;
+  final String subgenreid;
+  final String subgenrename;
+  final String genreid;
 
   const Subgenre({
-    required this.subGenreId,
-    required this.subGenreName,
-    required this.genreId
+    required this.subgenreid,
+    required this.subgenrename,
+    required this.genreid
     });
 
   Map<String, dynamic> toMap() => {
-    'subGenreId': subGenreId,
-    'subGenreName': subGenreName,
-    'genreId': genreId
+    'subgenreid': subgenreid,
+    'subgenrename': subgenrename,
+    'genreid': genreid
   };
 
   factory Subgenre.fromMap(Map<String, dynamic> map) => Subgenre(
-    subGenreId: map['subGenreId'] ?? '',
-    subGenreName: map['subGenreName'] ?? '',
-    genreId: map['genreId'] ?? '',
+    subgenreid: map['subgenreid'] ?? '',
+    subgenrename: map['subgenrename'] ?? '',
+    genreid: map['genreid'] ?? '',
   );
 
   

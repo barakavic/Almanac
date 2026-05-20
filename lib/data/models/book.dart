@@ -6,26 +6,26 @@ class Book{
   final String title;
   final String author;
   final String filepath;
-  final int spineColor;
-  final String? genreId;
-  final String? subgenreId;
-  final int lastPageRead;
-  final int totalPages;
-  final bool isArchived;
-  final DateTime addedAt;
+  final int spinecolor;
+  final String? genreid;
+  final String? subgenreid;
+  final int lastpageread;
+  final int totalpages;
+  final bool isarchived;
+  final DateTime addedat;
 
   const Book(
 { required this.bookid,
   required this.title,
   required this.author,
   required this.filepath,
-  required this.spineColor,
-  this.genreId,
-  this.subgenreId,
-  required this.lastPageRead,
-  required this.totalPages,
-  required this.isArchived,
-  required this.addedAt}
+  required this.spinecolor,
+  this.genreid,
+  this.subgenreid,
+  required this.lastpageread,
+  required this.totalpages,
+  required this.isarchived,
+  required this.addedat}
 );
 
 Map<String, dynamic> toMap(){
@@ -35,13 +35,13 @@ Map<String, dynamic> toMap(){
     'title': title,
     'author': author,
     'filepath': filepath,
-    'spineColor': spineColor,
-    'genreId': genreId,
-    'subgenreId': subgenreId,
-    'lastPageRead': lastPageRead,
-    'totalPages' : totalPages,
-    'isArchived': isArchived ? 1: 0,
-    'addedAt': addedAt.toIso8601String(),
+    'spinecolor': spinecolor,
+    'genreid': genreid,
+    'subgenreid': subgenreid,
+    'lastpageread': lastpageread,
+    'totalpages' : totalpages,
+    'isarchived': isarchived ? 1: 0,
+    'addedat': addedat.toIso8601String(),
   };
   
 }
@@ -54,13 +54,13 @@ factory Book.fromMap(Map<String, dynamic> map){
     title: map['title'] ?? '', 
     author: map['author']?? '', 
     filepath: map['filepath']?? '', 
-    spineColor:map['spinecolor']?? 0, 
-    genreId:map['genreid'], 
-    subgenreId:map['subgenreid'], 
-    lastPageRead:map['lastpageread']?? 0, 
-    totalPages:map['totalpages']?? 0, 
-    isArchived:map['isarchived'] == 1, 
-    addedAt:DateTime.parse(map['addedat']));
+    spinecolor:map['spinecolor']?? 0, 
+    genreid:map['genreid'], 
+    subgenreid:map['subgenreid'], 
+    lastpageread:map['lastpageread']?? 0, 
+    totalpages:map['totalpages']?? 0, 
+    isarchived:map['isarchived'] == 1, 
+    addedat:DateTime.parse(map['addedat']));
 }
 catch(e,st){
   appLogger.e('failed to parse Book. Map $map', error: e, stackTrace: st);

@@ -25,7 +25,7 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
   bool _isGridView = false;
 
     Widget _buildUnassignedSection(List<Book> allBooks) {
-    final unassignedBooks = allBooks.where((b) => b.genreId == null && !b.isArchived).toList();
+    final unassignedBooks = allBooks.where((b) => b.genreid == null && !b.isarchived).toList();
     
     if (unassignedBooks.isEmpty) return const SizedBox.shrink();
 
@@ -54,7 +54,7 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
 
 
       Widget _buildCurrentlyReadingSection(List<Book> allBooks){
-        final currentlyReading = allBooks.where((b)=>b.lastPageRead > 0 && !b.isArchived).toList();
+        final currentlyReading = allBooks.where((b)=>b.lastpageread > 0 && !b.isarchived).toList();
 
         if (currentlyReading.isEmpty)
           return const SizedBox.shrink();
@@ -94,8 +94,8 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
       }
 
     Widget _buildGenreSection(Genre genre, List<Book> allBooks){
-      final genreBooks = allBooks.where((b)=> b.genreId 
-      == genre.genreId && !b.isArchived
+      final genreBooks = allBooks.where((b)=> b.genreid 
+      == genre.genreid && !b.isarchived
       ).toList();
       if (genreBooks.isEmpty) return const SizedBox.shrink();
 
@@ -184,11 +184,11 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
       title: filename.replaceAll(RegExp(r'\.pdf$', caseSensitive: false), ''),
       author: 'Unknown Author',
       filepath: destPath,
-      spineColor: Colors.primaries[DateTime.now().second % Colors.primaries.length].value,
-      lastPageRead: 0,
-      totalPages: 0,
-      isArchived: false,
-      addedAt: DateTime.now(),
+      spinecolor: Colors.primaries[DateTime.now().second % Colors.primaries.length].value,
+      lastpageread: 0,
+      totalpages: 0,
+      isarchived: false,
+      addedat: DateTime.now(),
     );
 
     await ref.read(bookRepositoryProvider).addBook(newBook);

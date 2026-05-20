@@ -52,7 +52,7 @@ class BookRepository {
     try{final db = await _db.database;
     await db.update(
       'books',
-      {'isArchived': 1},
+      {'isarchived': 1},
       where: 'bookid = ?',
       whereArgs: [bookid],
     );}
@@ -61,6 +61,16 @@ class BookRepository {
       rethrow;
     }
   } 
+
+  Future<void> updateBookTotalPages(String bookid, int totalpages) async {
+    final db = await _db.database;
+    await db.update(
+      'books',
+      {'totalpages': totalpages},
+      where: 'bookid = ?',
+      whereArgs: [bookid]
+    );
+  }
 
   Future<void> deleteBook(String bookid) async {
     try{

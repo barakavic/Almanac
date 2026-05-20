@@ -1,24 +1,24 @@
 
 class Genre {
-  final String genreId;
+  final String genreid;
   final String name;
-  final int genreColor;
+  final int genrecolor;
 
   const Genre({ 
-    required this.genreId,
+    required this.genreid,
     required this.name,
-    required this.genreColor
+    required this.genrecolor
 
 
   });
 Map<String, dynamic> toMap() => {
-  'genreId': genreId,
+  'genreid': genreid,
   'name': name,
-  'genreColor': genreColor,
+  'genrecolor': genrecolor,
 };
 factory Genre.fromMap(Map<String, dynamic> map) => Genre( 
-genreId: map['genreId'] ?? '', 
+genreid: map['genreid'] ?? '', 
 name: map['name'] ?? '', 
-genreColor: map['genreColor'] ?? 0
+genrecolor: map['genrecolor'] ?? 0
 );
 }

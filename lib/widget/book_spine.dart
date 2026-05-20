@@ -21,7 +21,7 @@ class _BookSpineState extends State<BookSpine>{
   @override
   Widget build(BuildContext context) {
 
-  final double progress = widget.book.totalPages > 0 ?(widget.book.lastPageRead / widget.book.totalPages).clamp(0.0, 1.0) 
+  final double progress = widget.book.totalpages > 0 ?(widget.book.lastpageread / widget.book.totalpages).clamp(0.0, 1.0) 
   : 0.0; 
 
   return GestureDetector(
@@ -45,7 +45,7 @@ class _BookSpineState extends State<BookSpine>{
             Positioned.fill(
               child: Container(
                 decoration: BoxDecoration(
-                  color: Color(widget.book.spineColor),
+                  color: Color(widget.book.spinecolor),
                   borderRadius: BorderRadius.circular(4),
                   boxShadow: [
                     BoxShadow(

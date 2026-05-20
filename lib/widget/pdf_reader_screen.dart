@@ -31,9 +31,9 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen>{
         title: Text(book.title),
       ),
       body: SfPdfViewer.file(
-        controller: _pdfViewerController,
         File(book.filepath),
-        initialPageNumber: book.lastPageRead == 0 ? 1 : book.lastPageRead,
+        controller: _pdfViewerController,
+        initialPageNumber: book.lastpageread == 0 ? 1 : book.lastpageread,
         onPageChanged: (PdfPageChangedDetails details) {
           ref.read(bookRepositoryProvider).updateBook(
             book.bookid,
@@ -41,10 +41,10 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen>{
           );
         },
         onDocumentLoaded: (PdfDocumentLoadedDetails details) {
-          final totalPages = details.document.pages.count;
+          final totalpages = details.document.pages.count;
 
-          if (widget.book.totalPages == 0){
-            ref.read(bookRepositoryProvider).updateBook(widget.book.bookid, totalPages);
+          if (widget.book.totalpages == 0){
+            ref.read(bookRepositoryProvider).updateBookTotalPages(widget.book.bookid, totalpages);
           }
 
         },

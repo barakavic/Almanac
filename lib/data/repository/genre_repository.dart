@@ -22,12 +22,12 @@ class GenreRepository {
 
   }
 
-  Future<void> updateGenre(String genreId, String name) async{
+  Future<void> updateGenre(String genreid, String name) async{
     final db = await _db.database;
     await db.update('genre', 
     {'name': name},
-    where: 'genreId = ?',
-    whereArgs: [genreId]
+    where: 'genreid = ?',
+    whereArgs: [genreid]
     );
   }
 }
