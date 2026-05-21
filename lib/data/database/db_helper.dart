@@ -42,6 +42,13 @@ class DbHelper {
   FOREIGN KEY(bookid) REFERENCES books(bookid) ON DELETE CASCADE
   );''');
 
+    await db.execute('''CREATE TABLE wishlist(
+  wishlistid TEXT PRIMARY KEY,
+  coverpath TEXT,
+  title TEXT,
+  addedat TEXT
+  );''');
+
   
     }
     catch(e, st){
