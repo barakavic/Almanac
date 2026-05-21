@@ -49,7 +49,11 @@ class DbHelper {
   addedat TEXT
   );''');
 
-  
+  await db.execute('''CREATE TABLE users(
+  userid TEXT PRIMARY KEY,
+  name TEXT,
+  createdat TEXT
+  );''');
     }
     catch(e, st){
       appLogger.e('Failed to create database', error: e, stackTrace: st);
