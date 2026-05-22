@@ -223,7 +223,7 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Almanack'
+          'Almanac'
         ),
         actions: [
           IconButton(onPressed: (){

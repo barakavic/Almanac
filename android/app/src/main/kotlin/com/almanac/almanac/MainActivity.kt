@@ -1,4 +1,4 @@
-package com.bookshelf.bookshelf
+package com.almanac.almanac
 
 import io.flutter.embedding.android.FlutterActivity
 
