@@ -6,8 +6,23 @@ class GenreRepository {
   final DbHelper _db;
   GenreRepository(this._db);
 
+
+
   Future<void> addGenres(Genre genre) async{
+    final name = genre.name.trim();
+    if (name.isEmpty) return;
+
+    
     final db = await _db.database;
+
+    final existing = await db.query(
+      'genre',
+      where: 'LOWER(name) = ?',
+      whereArgs: [name.toLowerCase()],
+      limit: 1,
+    );
+    if (existing.isNotEmpty) return;
+    
     await db.insert('genre', 
     genre.toMap(),
     conflictAlgorithm: ConflictAlgorithm.replace
@@ -30,4 +45,19 @@ class GenreRepository {
     whereArgs: [genreid]
     );
   }
+
+  Future<void> deleteGenre(String genreid) async {
+    final db = await _db.database;
+    final rowsDeleted = await db.delete(
+      'genre',
+      where: 'genreid = ?',
+      whereArgs: [genreid],
+    );
+
+    if (rowsDeleted == 0) {
+      throw Exception('No genre found with id "$genreid".');
+    }
+  }
+
+  
 }
