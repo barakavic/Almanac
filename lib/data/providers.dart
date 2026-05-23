@@ -16,3 +16,5 @@ final genreRepositoryProvider = Provider<GenreRepository>(
   (ref)=> GenreRepository(ref.watch(dbHelperProvider) )
 );
 final genreProvider = FutureProvider<List<Genre>>((ref) => ref.watch(genreRepositoryProvider).getAllGenres(),);
+
+
