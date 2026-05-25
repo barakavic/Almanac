@@ -5,6 +5,7 @@ import 'package:bookshelf/data/providers.dart';
 import 'package:bookshelf/utils/app_logger.dart';
 import 'package:bookshelf/widget/genre_divider.dart';
 import 'package:bookshelf/widget/book_spine.dart';
+import 'package:bookshelf/widget/genre_management_screen.dart';
 import 'package:bookshelf/widget/pdf_reader_screen.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -233,12 +234,17 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
               ;
               
             });
-          }, icon: Icon(_isGridView?
+          }, 
+          icon: Icon(_isGridView?
           Icons.view_agenda:
           Icons.grid_view
           ),
 
           ),
+
+          IconButton(icon: const Icon(Icons.category), onPressed: (){
+            Navigator.push(context, MaterialPageRoute(builder: (context)=> const GenreManagementScreen()));
+          },)
         ],
       ),
       body: bookAsync.when(
