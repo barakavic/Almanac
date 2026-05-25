@@ -10,6 +10,7 @@ import 'package:bookshelf/widget/pdf_reader_screen.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:bookshelf/data/models/book.dart';
 import 'package:uuid/uuid.dart';
@@ -255,7 +256,7 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
             return const Center(child: Text('Grid view is coming soon'),);
           }
           return genreAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => const Center(child: SpinKitThreeBounce(color: Colors.blue,)),
             error: (err, stack) => Center(child: Text('Error, $err')),
             data: (genres) {
               return Center(
