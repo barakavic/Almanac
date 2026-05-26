@@ -1,5 +1,6 @@
 import 'package:bookshelf/data/models/book.dart';
 import 'package:bookshelf/data/providers.dart';
+import 'package:bookshelf/utils/app_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
@@ -21,7 +22,29 @@ class PdfReaderScreen extends ConsumerStatefulWidget{
 class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen>{
   
    final PdfViewerController _pdfViewerController = PdfViewerController();
-     
+   late final _initialPage;
+   int _currentPage = 1;
+
+@override
+  void initState() {
+    super.initState();
+    _initialPage = widget.book.lastpageread == 0 ? 1 : widget.book.lastpageread;
+    _currentPage = _initialPage;
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    if(_currentPage != _initialPage){
+      ref.read(bookRepositoryProvider).updateBook(widget.book.bookid, _currentPage)
+      .catchError((e, st){
+        appLogger.e(e);
+
+      });
+
+    }
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context){
@@ -35,10 +58,7 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen>{
         controller: _pdfViewerController,
         initialPageNumber: book.lastpageread == 0 ? 1 : book.lastpageread,
         onPageChanged: (PdfPageChangedDetails details) {
-          ref.read(bookRepositoryProvider).updateBook(
-            book.bookid,
-            details.newPageNumber,
-          );
+          setState(()=> _currentPage = details.newPageNumber);
         },
         onDocumentLoaded: (PdfDocumentLoadedDetails details) {
           final totalpages = details.document.pages.count;
