@@ -88,10 +88,43 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
               child: Row(
                 children: currentlyReading.map((book){
                   return Padding(padding: const EdgeInsets.only(right: 16.0),
-                  child: BookSpine(book: book, onTap: (){
-                    Navigator.push(context, MaterialPageRoute(builder: (_)=> PdfReaderScreen(book: book)));
+                  child: GestureDetector(
+                    onLongPress: (){
+                      showModalBottomSheet(context: context, 
+                      builder: (ctx)=> SafeArea(child: 
+                      Wrap(
+                        children: [
+                          ListTile(
+                            leading: Icon(Icons.open_in_new),
+                            title: Text('Open'),
+                            onTap: (){
+                              Navigator.pop(ctx);
+                              Navigator.push(context, MaterialPageRoute(builder: (_)=> PdfReaderScreen(book: book)));
 
-                  }),
+                            },
+                          ),
+                          ListTile(
+                            leading: Icon(Icons.archive),
+                            title: Text('Archive'),
+                            onTap: (){
+                              Navigator.pop(ctx);
+                            },
+                          ),
+                          ListTile(
+                            leading: Icon(Icons.close),
+                            title: Text('Cancel'),
+                            onTap: () {Navigator.pop(ctx);},
+                          )
+                        ],
+
+                      )
+                      ));
+                      
+                    },
+                    child: BookSpine(book: book, onTap: (){
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => PdfReaderScreen(book: book)));
+                    }),
+                  )
                   );
                 }).toList(),
               ),
