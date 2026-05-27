@@ -5,6 +5,7 @@ import 'package:bookshelf/data/providers.dart';
 import 'package:bookshelf/utils/app_logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'dart:io';
 class PdfReaderScreen extends ConsumerStatefulWidget{
@@ -27,6 +28,7 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> with WidgetsB
    late final _initialPage;
    int _currentPage = 1;
    Timer? _debounce;
+   String? _selectedText;
 
    Future<void> _saveCurrentPage() async{
     if (_currentPage == _initialPage) return;
@@ -87,6 +89,13 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> with WidgetsB
           // _debounce?.cancel();
           _debounce = Timer(const Duration(seconds: 2), ()=> _saveCurrentPage());
         },
+        onTextSelectionChanged: (
+          PdfTextSelectionChangedDetails details
+        ){
+          setState(() {
+            _selectedText = details.selectedText;
+          });
+        },
         onDocumentLoaded: (PdfDocumentLoadedDetails details) {
           final totalpages = details.document.pages.count;
 
@@ -95,7 +104,17 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> with WidgetsB
           }
 
         },
+
+        
       ),
+      floatingActionButton: _selectedText != null && _selectedText!.isNotEmpty ? 
+      FloatingActionButton.extended(onPressed: (){
+        final shareText = '"$_selectedText"\n\n-${book.title}, Page $_currentPage';
+        Share.share(shareText);
+      }, icon: const Icon(Icons.ios_share),
+      label: const Text('Share Quote'),
+      ): null,
+
 
     ),
     onWillPop: ()async{

@@ -35,7 +35,7 @@ class _GenreManagementScreenState extends ConsumerState<GenreManagementScreen>{
 
     await ref.read(genreRepositoryProvider).addGenres(newGenre);
 
-    ref.refresh(genreProvider);
+    ref.invalidate(genreProvider);
 
     genreController.clear();
 
@@ -54,7 +54,7 @@ class _GenreManagementScreenState extends ConsumerState<GenreManagementScreen>{
       ),
       body:  Column(
         children: [
-          Padding(padding: EdgeInsets.all(12),
+          Padding(padding: const EdgeInsets.all(12),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -82,21 +82,25 @@ class _GenreManagementScreenState extends ConsumerState<GenreManagementScreen>{
 
           ),
           data: (genreList){
-            return ListView.builder(itemCount:  genreList.length,
-            itemBuilder: (context, index){
-              final genre = genreList[index];
-              return ListTile(title: Text(genre.name),
-              trailing: IconButton(onPressed: () async {
-            await ref.read(genreRepositoryProvider).deleteGenre(genre.genreid);
-            ref.invalidate(genreProvider);
-          }, icon: Icon(Icons.delete)),
-              );
-
-            
-              
-            },
-            );
-          }
+            if (genreList.isEmpty) {
+  return const Center(child: Text('No genres yet. Add one above'),);
+            }
+  return ListView.builder(itemCount:  genreList.length,
+  itemBuilder: (context, index){
+    final genre = genreList[index];
+    return ListTile(title: Text(genre.name),
+    trailing: IconButton(onPressed: () async {
+  await ref.read(genreRepositoryProvider).deleteGenre(genre.genreid);
+  ref.invalidate(genreProvider);
+            }, icon: Icon(Icons.delete)),
+    );
+  
+  
+    
+  },
+  );
+}
+          
           ),
           
           ),
