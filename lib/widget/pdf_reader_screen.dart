@@ -3,8 +3,11 @@ import 'dart:async';
 import 'package:bookshelf/data/models/book.dart';
 import 'package:bookshelf/data/providers.dart';
 import 'package:bookshelf/utils/app_logger.dart';
+import 'package:bookshelf/widget/PdfReaderComponent/quote_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'dart:io';
@@ -29,6 +32,7 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> with WidgetsB
    int _currentPage = 1;
    Timer? _debounce;
    String? _selectedText;
+   final ScreenshotController _screenshotController = ScreenshotController();
 
    Future<void> _saveCurrentPage() async{
     if (_currentPage == _initialPage) return;
@@ -108,7 +112,23 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> with WidgetsB
         
       ),
       floatingActionButton: _selectedText != null && _selectedText!.isNotEmpty ? 
-      FloatingActionButton.extended(onPressed: (){
+      FloatingActionButton.extended(onPressed: () async{
+        final capturedImage = await _screenshotController.captureFromWidget(
+          QuoteCard(text: _selectedText!, 
+          bookTitle: book.title, 
+          page: _currentPage
+          ),
+          delay: const Duration(
+            milliseconds: 100
+          ),
+
+          
+        );
+        final directory = await getTemporaryDirectory();
+        final imagePath = await File('${directory.path}/quote.png').create();
+        await imagePath.writeAsBytes(capturedImage);
+
+        await Share.shareXFiles([XFile(imagePath.path)], text: 'Check out this quote!');
         final shareText = '"$_selectedText"\n\n-${book.title}, Page $_currentPage';
         Share.share(shareText);
       }, icon: const Icon(Icons.ios_share),
