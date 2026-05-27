@@ -11,6 +11,13 @@ import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'dart:io';
+
+const List<double> invertColorMatrix = <double>[
+  -1.0, 0.0, 0.0, 0.0, 255.0,
+  0.0, -1.0, 0.0, 0.0, 255.0,
+  0.0, 0.0, -1.0, 0.0, 255.0,
+  0.0, 0.0, 0.0 , 1.0, 0.0
+];
 class PdfReaderScreen extends ConsumerStatefulWidget{
   final Book book;
   
@@ -33,6 +40,7 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> with WidgetsB
    Timer? _debounce;
    String? _selectedText;
    final ScreenshotController _screenshotController = ScreenshotController();
+   bool _isDarkMode = false;
 
    Future<void> _saveCurrentPage() async{
     if (_currentPage == _initialPage) return;
@@ -82,8 +90,18 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> with WidgetsB
     return WillPopScope(child:  Scaffold(
       appBar: AppBar(
         title: Text(book.title),
+        actions: [
+          IconButton(onPressed: (){
+            setState(() {
+              _isDarkMode = !_isDarkMode;
+            });
+          }, 
+          icon: Icon(_isDarkMode? Icons.light_mode : Icons.dark_mode))
+        ],
       ),
-      body: SfPdfViewer.file(
+      body: _isDarkMode ? ColorFiltered(
+      colorFilter: const ColorFilter.matrix(invertColorMatrix), 
+      child: SfPdfViewer.file(
         File(book.filepath),
         canShowScrollHead: false,
         controller: _pdfViewerController,
@@ -111,6 +129,37 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> with WidgetsB
 
         
       ),
+      )
+      : SfPdfViewer.file(
+        File(book.filepath),
+        canShowScrollHead: false,
+        controller: _pdfViewerController,
+        initialPageNumber: book.lastpageread == 0 ? 1 : book.lastpageread,
+        onPageChanged: (PdfPageChangedDetails details) {
+          _currentPage = details.newPageNumber;
+          // _debounce?.cancel();
+          _debounce = Timer(const Duration(seconds: 2), ()=> _saveCurrentPage());
+        },
+        onTextSelectionChanged: (
+          PdfTextSelectionChangedDetails details
+        ){
+          setState(() {
+            _selectedText = details.selectedText;
+          });
+        },
+        onDocumentLoaded: (PdfDocumentLoadedDetails details) {
+          final totalpages = details.document.pages.count;
+
+          if (widget.book.totalpages == 0){
+            ref.read(bookRepositoryProvider).updateBookTotalPages(widget.book.bookid, totalpages);
+          }
+
+        },
+
+        
+      ),
+      
+
       floatingActionButton: _selectedText != null && _selectedText!.isNotEmpty ? 
       FloatingActionButton.extended(onPressed: () async{
         final capturedImage = await _screenshotController.captureFromWidget(
