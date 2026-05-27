@@ -87,6 +87,34 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> with WidgetsB
   @override
   Widget build(BuildContext context){
     final book  = widget.book;
+    final pdfViewer = SfPdfViewer.file(
+        File(book.filepath),
+        canShowScrollHead: false,
+        controller: _pdfViewerController,
+        initialPageNumber: book.lastpageread == 0 ? 1 : book.lastpageread,
+        onPageChanged: (PdfPageChangedDetails details) {
+          _currentPage = details.newPageNumber;
+          // _debounce?.cancel();
+          _debounce = Timer(const Duration(seconds: 2), ()=> _saveCurrentPage());
+        },
+        onTextSelectionChanged: (
+          PdfTextSelectionChangedDetails details
+        ){
+          setState(() {
+            _selectedText = details.selectedText;
+          });
+        },
+        onDocumentLoaded: (PdfDocumentLoadedDetails details) {
+          final totalpages = details.document.pages.count;
+
+          if (widget.book.totalpages == 0){
+            ref.read(bookRepositoryProvider).updateBookTotalPages(widget.book.bookid, totalpages);
+          }
+
+        },
+
+        
+      );
     return WillPopScope(child:  Scaffold(
       appBar: AppBar(
         title: Text(book.title),
@@ -101,64 +129,8 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> with WidgetsB
       ),
       body: _isDarkMode ? ColorFiltered(
       colorFilter: const ColorFilter.matrix(invertColorMatrix), 
-      child: SfPdfViewer.file(
-        File(book.filepath),
-        canShowScrollHead: false,
-        controller: _pdfViewerController,
-        initialPageNumber: book.lastpageread == 0 ? 1 : book.lastpageread,
-        onPageChanged: (PdfPageChangedDetails details) {
-          _currentPage = details.newPageNumber;
-          // _debounce?.cancel();
-          _debounce = Timer(const Duration(seconds: 2), ()=> _saveCurrentPage());
-        },
-        onTextSelectionChanged: (
-          PdfTextSelectionChangedDetails details
-        ){
-          setState(() {
-            _selectedText = details.selectedText;
-          });
-        },
-        onDocumentLoaded: (PdfDocumentLoadedDetails details) {
-          final totalpages = details.document.pages.count;
-
-          if (widget.book.totalpages == 0){
-            ref.read(bookRepositoryProvider).updateBookTotalPages(widget.book.bookid, totalpages);
-          }
-
-        },
-
-        
-      ),
-      )
-      : SfPdfViewer.file(
-        File(book.filepath),
-        canShowScrollHead: false,
-        controller: _pdfViewerController,
-        initialPageNumber: book.lastpageread == 0 ? 1 : book.lastpageread,
-        onPageChanged: (PdfPageChangedDetails details) {
-          _currentPage = details.newPageNumber;
-          // _debounce?.cancel();
-          _debounce = Timer(const Duration(seconds: 2), ()=> _saveCurrentPage());
-        },
-        onTextSelectionChanged: (
-          PdfTextSelectionChangedDetails details
-        ){
-          setState(() {
-            _selectedText = details.selectedText;
-          });
-        },
-        onDocumentLoaded: (PdfDocumentLoadedDetails details) {
-          final totalpages = details.document.pages.count;
-
-          if (widget.book.totalpages == 0){
-            ref.read(bookRepositoryProvider).updateBookTotalPages(widget.book.bookid, totalpages);
-          }
-
-        },
-
-        
-      ),
-      
+      child: pdfViewer)
+      : pdfViewer,
 
       floatingActionButton: _selectedText != null && _selectedText!.isNotEmpty ? 
       FloatingActionButton.extended(onPressed: () async{
