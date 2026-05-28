@@ -1,5 +1,6 @@
 import 'package:bookshelf/data/models/genre.dart';
 import 'package:bookshelf/data/providers.dart';
+import 'package:bookshelf/widget/genre_detail_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -85,14 +86,25 @@ class _GenreManagementScreenState extends ConsumerState<GenreManagementScreen>{
             if (genreList.isEmpty) {
   return const Center(child: Text('No genres yet. Add one above'),);
             }
-  return ListView.builder(itemCount:  genreList.length,
+  return ListView.builder(
+  itemCount:  genreList.length,
   itemBuilder: (context, index){
     final genre = genreList[index];
-    return ListTile(title: Text(genre.name),
-    trailing: IconButton(onPressed: () async {
-  await ref.read(genreRepositoryProvider).deleteGenre(genre.genreid);
-  ref.invalidate(genreProvider);
-            }, icon: Icon(Icons.delete)),
+    return ListTile(
+    title: Text(genre.name),
+    onTap: (){
+      Navigator.push(context, MaterialPageRoute(
+        builder: (_) => GenreDetailScreen(genre: genre),
+      ),
+      );
+    },
+    trailing: IconButton(
+      onPressed: () async {
+      await ref.read(genreRepositoryProvider).deleteGenre(genre.genreid);
+      ref.invalidate(genreProvider);
+            
+      }, 
+      icon: Icon(Icons.delete)),
     );
   
   

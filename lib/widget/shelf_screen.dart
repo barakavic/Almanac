@@ -20,8 +20,6 @@ class ShelfScreen extends ConsumerStatefulWidget {
 
   @override
   ConsumerState<ShelfScreen> createState() => _ShelfScreenState();
-
-  
   
 }
 class _ShelfScreenState extends ConsumerState<ShelfScreen>{
@@ -63,8 +61,9 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
       Widget _buildCurrentlyReadingSection(List<Book> allBooks){
         final currentlyReading = allBooks.where((b)=>b.lastpageread > 0 && !b.isarchived).toList();
 
-        if (currentlyReading.isEmpty)
-          return const SizedBox.shrink();
+        if (currentlyReading.isEmpty){
+        return const SizedBox.shrink();
+        }
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -144,7 +143,11 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           GestureDetector(
-            onTap: () {},
+            onTap: () {
+             /*  Navigator.push(context, MaterialPageRoute(builder: (_)=> GenreDetailScreen(genre: genre)
+              )
+              ); */
+            },
             child: Padding(padding: EdgeInsets.symmetric(
               horizontal: 24, vertical: 16
 
@@ -176,7 +179,6 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
             GenreDivider(genre: genre),
             const SizedBox(width: 16,),
             ...genreBooks.map((book){
-// 
               return Padding(padding: EdgeInsets.only(
                 right: 16.0
               ),
@@ -185,8 +187,7 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
                 MaterialPageRoute(builder: (_)=> PdfReaderScreen(book: book)
                 ),
                 );
-// 
-// 
+
               }
               // 
               ),
@@ -198,10 +199,7 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
         ],
       );
 
-      
-
-/*       return 
- */
+    
     }
 
    Future<void> _importBook()async{
