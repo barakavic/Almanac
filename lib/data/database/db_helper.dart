@@ -27,7 +27,7 @@ class DbHelper {
 
     await db.execute("CREATE TABLE genre( genreid TEXT PRIMARY KEY, name TEXT, genreColor INTEGER); ");
 
-    await db.execute("CREATE TABLE subgenre( subgenreid TEXT PRIMARY KEY, subgenrename TEXT, genreId TEXT, FOREIGN KEY (genreid) REFERENCES genre(genreid) ON DELETE SET NULL );");
+    await db.execute("CREATE TABLE subgenre( subgenreid TEXT PRIMARY KEY, subgenrename TEXT, genreid TEXT, FOREIGN KEY (genreid) REFERENCES genre(genreid) ON DELETE SET NULL );");
 
     await db.execute("CREATE TABLE annotations(annotationid TEXT PRIMARY KEY, bookid TEXT, pagenumber INTEGER, highlightedtext TEXT, note TEXT, tag TEXT, createdat TEXT, FOREIGN KEY(bookid) references books(bookid) ON DELETE CASCADE);");
 

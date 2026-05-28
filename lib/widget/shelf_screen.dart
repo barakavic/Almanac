@@ -233,7 +233,7 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
       lastpageread: 0,
       totalpages: 0,
       isarchived: false,
-      addedat: DateTime.now(),
+      addedat: DateTime.now(),      
     );
 
     await ref.read(bookRepositoryProvider).addBook(newBook);

@@ -1,8 +1,10 @@
 import 'package:bookshelf/data/database/db_helper.dart';
 import 'package:bookshelf/data/models/book.dart';
 import 'package:bookshelf/data/models/genre.dart';
+import 'package:bookshelf/data/models/subgenre.dart';
 import 'package:bookshelf/data/repository/book_repository.dart';
 import 'package:bookshelf/data/repository/genre_repository.dart';
+import 'package:bookshelf/data/repository/subgenre_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final dbHelperProvider = Provider<DbHelper>((ref)=> DbHelper());
@@ -18,3 +20,13 @@ final genreRepositoryProvider = Provider<GenreRepository>(
 final genreProvider = FutureProvider<List<Genre>>((ref) => ref.watch(genreRepositoryProvider).getAllGenres(),);
 
 
+final subGenreRepositoryProvider = Provider<SubgenreRepository>((ref) => SubgenreRepository(ref.watch(dbHelperProvider)),);
+
+final subGenresByGenreProvider = FutureProvider.family<List<Subgenre>, String>((ref, genreid){
+  return ref.watch(subGenreRepositoryProvider).getSubgenreByGenre(genreid);
+
+});
+
+final booksByGenreProvider = FutureProvider.family<List<Book>, String>((ref, genreid){
+  return ref.watch(bookRepositoryProvider).getBooksByGenre(genreid);
+});

@@ -86,4 +86,16 @@ class BookRepository {
     }
   }
 
+  Future<List<Book>> getBooksByGenre(String genreid) async{
+  final db = await _db.database;
+
+  final rows =  await db.query(
+    'books',
+    where: 'genreid = ? AND isarchived = ?',
+    whereArgs: [genreid, 0],
+  );
+  return rows.map((row) => Book.fromMap(row)).toList();
 }
+
+}
+
