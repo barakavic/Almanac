@@ -64,10 +64,25 @@ class _GenreDetailScreenState extends ConsumerState<GenreDetailScreen>{
        subgenreid: selectedSubgenreId
        );
 
+       await ref.read(bookRepositoryProvider).addBook(newBook);
+       ref.invalidate(booksByGenreProvider(widget.genre.genreid));
+       ref.invalidate(booksProvider);
 
+       if(mounted){
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Book added successfully'))
+        );
+       }
 
     }
     catch(e, st){
+      appLogger.e('Failed to import book', error: e, stackTrace: st);
+      if(mounted){
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to import book'))
+        );
+      }
+
       
     }
   }
@@ -189,8 +204,8 @@ class _GenreDetailScreenState extends ConsumerState<GenreDetailScreen>{
           
         ],
       ),
-      floatingActionButton: FloatingActionButton(onPressed: (){},
-      child: Icon(Icons.add),),
+      floatingActionButton: FloatingActionButton(onPressed: _importBookIntoGenre,
+      child: const Icon(Icons.add),),
 
   );
   }
