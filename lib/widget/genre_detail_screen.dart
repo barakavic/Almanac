@@ -5,6 +5,7 @@ import 'package:bookshelf/data/models/genre.dart';
 import 'package:bookshelf/data/providers.dart';
 import 'package:bookshelf/utils/app_logger.dart';
 import 'package:bookshelf/widget/pdf_reader_screen.dart';
+import 'package:bookshelf/widget/subgenre_management_dialog.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -100,10 +101,13 @@ class _GenreDetailScreenState extends ConsumerState<GenreDetailScreen>{
       appBar: AppBar(
         title: Text(widget.genre.name),
         actions: [
-          IconButton(onPressed: (){
-            
-          }, 
-          icon: Icon(Icons.label_outline))
+          IconButton(
+            onPressed: () => showDialog(
+              context: context, 
+              builder: (_) => SubgenreManagementDialog(genre: widget.genre)
+            ),
+            icon: const Icon(Icons.label_outline)
+          )
         ],
         
       ),
@@ -171,11 +175,19 @@ class _GenreDetailScreenState extends ConsumerState<GenreDetailScreen>{
                   final progress = book.totalpages == 0 
                   ? 0.0
                   : (book.lastpageread/ book.totalpages).clamp(0.0, 1.0);
-                  return InkWell(
-                    onTap: ()=> Navigator.push(context, MaterialPageRoute(builder: (_)=> PdfReaderScreen(book: book))),
-                  
-                  child: Card(
-                    child: Padding(padding: 
+                  return 
+                  Card(
+                    clipBehavior: Clip.hardEdge,
+                    child:InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PdfReaderScreen(book: book),
+                          ),
+                        );
+                      },
+                      child:  Padding(padding: 
                     const EdgeInsets.all(12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
