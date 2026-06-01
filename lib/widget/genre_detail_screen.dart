@@ -4,6 +4,7 @@ import 'package:bookshelf/data/models/book.dart';
 import 'package:bookshelf/data/models/genre.dart';
 import 'package:bookshelf/data/providers.dart';
 import 'package:bookshelf/utils/app_logger.dart';
+import 'package:bookshelf/widget/pdf_reader_screen.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -98,6 +99,12 @@ class _GenreDetailScreenState extends ConsumerState<GenreDetailScreen>{
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.genre.name),
+        actions: [
+          IconButton(onPressed: (){
+            
+          }, 
+          icon: Icon(Icons.label_outline))
+        ],
         
       ),
       body: Column(
@@ -162,10 +169,12 @@ class _GenreDetailScreenState extends ConsumerState<GenreDetailScreen>{
                 itemBuilder: (context, index){
                   final book = filteredBooks[index];
                   final progress = book.totalpages == 0 
-                  ? 0.0 
-                  : book.lastpageread/ book.totalpages;
-
-                  return Card(
+                  ? 0.0
+                  : (book.lastpageread/ book.totalpages).clamp(0.0, 1.0);
+                  return InkWell(
+                    onTap: ()=> Navigator.push(context, MaterialPageRoute(builder: (_)=> PdfReaderScreen(book: book))),
+                  
+                  child: Card(
                     child: Padding(padding: 
                     const EdgeInsets.all(12),
                     child: Column(
@@ -196,6 +205,7 @@ class _GenreDetailScreenState extends ConsumerState<GenreDetailScreen>{
                     ),
                     ),
 
+                  )
                   );
                 });
           }, error: (error, stackTrace) => Center(
