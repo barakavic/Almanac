@@ -13,7 +13,7 @@ class GenreDivider extends StatelessWidget{
       height: 220,
       child: Container(
         decoration: BoxDecoration(
-          color: Theme.of(context).dividerColor,
+          color: const Color(0xFF1F4FBF),
           borderRadius: BorderRadius.circular(4),
           border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
           width: 0.5
