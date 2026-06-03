@@ -66,7 +66,8 @@ class _SubgenreManagementDialogState extends ConsumerState<SubgenreManagementDia
               ],
             ),
             const SizedBox(height: 16),
-            Expanded(
+            SizedBox(
+              height: 300,
               child: subgenreState.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (error, stack) => Center(child: Text('Error: $error')),
