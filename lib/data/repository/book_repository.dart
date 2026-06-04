@@ -97,5 +97,19 @@ class BookRepository {
   return rows.map((row) => Book.fromMap(row)).toList();
 }
 
+Future<Book?> getBookByPath(String filePath) async{
+  final db = await _db.database;
+
+  final rows = await db.query(
+    'books',
+    where: 'filepath = ?',
+    limit: 1
+  );
+
+  if (rows.isEmpty) return null;
+
+  return Book.fromMap(rows.first);
+}
+
 }
 

@@ -35,14 +35,15 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
     void initState(){
       super.initState();
 
-      _appLinks = AppLinks();
+     WidgetsBinding.instance.addPostFrameCallback(
+      (_) {
+         _appLinks = AppLinks();
 
       _appLinks.getInitialLink().then((uri){
         if (uri != null) _processIncomingUri(uri);
       });
 
-      _linkSubScription = _appLinks.uriLinkStream.listen((uri){
-        _processIncomingUri(uri);
+      _linkSubScription = _appLinks.uriLinkStream.listen(_processIncomingUri);
       });
     }
 
@@ -54,6 +55,14 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
 
     Future<void> _processIncomingUri(Uri uri) async{
       try{
+
+        if(uri.scheme != 'content' && uri.scheme != 'file') return;
+
+        final path = uri.path;
+
+        if (!path.endsWith('.pdf')) return;
+
+        await _handleIncomingFile(path);  
         File file = await toFile(uri.toString());
         await _handleIncomingFile(file.path);
 
@@ -66,10 +75,19 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
 
     Future<void> _handleIncomingFile(String sharedFilePath) async{
       try{
+        
       final fileName = sharedFilePath.split('/').last;
 
       final appDir = await getApplicationDocumentsDirectory();
       final destinationPath = '${appDir.path}/$fileName';
+
+      final existing = await ref.read(bookRepositoryProvider).getBookByPath(destinationPath);
+      if (existing != null){
+        if (mounted){
+          Navigator.push(context, 
+          MaterialPageRoute(builder: (_)=> PdfReaderScreen(book: existing)));
+        }
+      }
 
       await File(sharedFilePath).copy(destinationPath);
 
@@ -79,7 +97,7 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
           RegExp(r'\.pdf$', caseSensitive: false
           ),
            ''), 
-           author: 'Uknown Author', 
+           author: 'Unkown Author', 
            filepath: destinationPath, 
            spinecolor: Colors.primaries[DateTime.now().second % Colors.primaries.length].value,
             lastpageread: 0, 
