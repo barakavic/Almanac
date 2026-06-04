@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:io';
 
+import 'package:app_links/app_links.dart';
 import 'package:bookshelf/data/models/genre.dart';
 import 'package:bookshelf/data/providers.dart';
 import 'package:bookshelf/utils/app_logger.dart';
@@ -13,6 +15,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:bookshelf/data/models/book.dart';
+import 'package:uri_to_file/uri_to_file.dart';
 import 'package:uuid/uuid.dart';
 
 class ShelfScreen extends ConsumerStatefulWidget {
@@ -23,13 +26,94 @@ class ShelfScreen extends ConsumerStatefulWidget {
   
 }
 class _ShelfScreenState extends ConsumerState<ShelfScreen>{
-  bool _isGridView = false;
+    bool _isGridView = false;
+
+    late AppLinks _appLinks;
+    StreamSubscription<Uri>? _linkSubScription;
+
+    @override
+    void initState(){
+      super.initState();
+
+      _appLinks = AppLinks();
+
+      _appLinks.getInitialLink().then((uri){
+        if (uri != null) _processIncomingUri(uri);
+      });
+
+      _linkSubScription = _appLinks.uriLinkStream.listen((uri){
+        _processIncomingUri(uri);
+      });
+    }
+
+    @override
+    void dispose(){
+      _linkSubScription?.cancel();
+      super.dispose();
+    }
+
+    Future<void> _processIncomingUri(Uri uri) async{
+      try{
+        File file = await toFile(uri.toString());
+        await _handleIncomingFile(file.path);
+
+      }
+      catch(e,st){
+        appLogger.e('Failed to process File $e', error: e, stackTrace: st);
+      }
+
+    }
+
+    Future<void> _handleIncomingFile(String sharedFilePath) async{
+      try{
+      final fileName = sharedFilePath.split('/').last;
+
+      final appDir = await getApplicationDocumentsDirectory();
+      final destinationPath = '${appDir.path}/$fileName';
+
+      await File(sharedFilePath).copy(destinationPath);
+
+      final newBook = Book(
+        bookid: const Uuid().v4(), 
+        title: fileName.replaceAll(
+          RegExp(r'\.pdf$', caseSensitive: false
+          ),
+           ''), 
+           author: 'Uknown Author', 
+           filepath: destinationPath, 
+           spinecolor: Colors.primaries[DateTime.now().second % Colors.primaries.length].value,
+            lastpageread: 0, 
+            totalpages: 0, 
+            isarchived: false, 
+            addedat: DateTime.now()
+            );
+
+            await ref.read(bookRepositoryProvider).addBook(newBook);
+
+            ref.invalidate(booksProvider);
+
+            if(mounted){
+              Navigator.push(context, MaterialPageRoute(builder: (_) => PdfReaderScreen(book: newBook)));
+            }
+      }
+      catch(e,st){
+        appLogger.e('Failed to process incoming File',error: e, stackTrace: st);
+        if(mounted){
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to open shared book'))
+          );
+        }
+      }
+
+    }
 
     Widget _buildUnassignedSection(List<Book> allBooks) {
     final unassignedBooks = allBooks.where((b) => b.genreid == null && !b.isarchived).toList();
     
     if (unassignedBooks.isEmpty) return const SizedBox.shrink();
 
+    
+   
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
