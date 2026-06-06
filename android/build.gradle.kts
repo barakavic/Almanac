@@ -16,6 +16,15 @@ subprojects {
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
 subprojects {
+    
+    afterEvaluate {
+        project.extensions.findByType<com.android.build.gradle.LibraryExtension>()?.apply {
+            if (namespace == null || namespace!!.isEmpty()) {
+                namespace = "com.example.${project.name.replace("-", "_")}"
+            }
+        }
+    }
+
     project.evaluationDependsOn(":app")
 }
 
