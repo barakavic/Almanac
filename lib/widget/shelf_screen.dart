@@ -9,6 +9,7 @@ import 'package:bookshelf/widget/genre_divider.dart';
 import 'package:bookshelf/widget/book_spine.dart';
 import 'package:bookshelf/widget/genre_management_screen.dart';
 import 'package:bookshelf/widget/pdf_reader_screen.dart';
+import 'package:bookshelf/widget/reassign_book_sheet.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -131,6 +132,7 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
     if (unassignedBooks.isEmpty) return const SizedBox.shrink();
 
     
+
    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -144,14 +146,16 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Row(
             children: unassignedBooks.map((book) {
-              return Padding(
+              return GestureDetector( 
+                onLongPress: () => _showReassignSheet(book),
+                child: Padding(
                 padding: const EdgeInsets.only(right: 16.0),
                 child: BookSpine(book: book, onTap: () {
                   Navigator.push(context, 
                   MaterialPageRoute(builder: (_) => PdfReaderScreen(book: book)) 
                   );
                 }),
-              );
+              ));
             }).toList(),
           ),
         ),
@@ -188,7 +192,9 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
               ),
               child: Row(
                 children: currentlyReading.map((book){
-                  return Padding(padding: const EdgeInsets.only(right: 16.0),
+                  return GestureDetector( 
+                  onLongPress: () => _showReassignSheet(book),  
+                  child: Padding(padding: const EdgeInsets.only(right: 16.0),
                   child: GestureDetector(
                     onLongPress: (){
                       showModalBottomSheet(context: context, 
@@ -215,8 +221,17 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
                             leading: Icon(Icons.close),
                             title: Text('Cancel'),
                             onTap: () {Navigator.pop(ctx);},
+                          ),
+                          ListTile(
+                            leading: const Icon(Icons.swap_horiz),
+                            title: const Text('Reassign'),
+                            onTap: (){
+                              Navigator.pop(ctx);
+                              _showReassignSheet(book);
+                            },
                           )
                         ],
+
 
                       )
                       ));
@@ -226,6 +241,7 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
                       Navigator.push(context, MaterialPageRoute(builder: (_) => PdfReaderScreen(book: book)));
                     }),
                   )
+                  ),
                   );
                 }).toList(),
               ),
@@ -302,6 +318,13 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
       );
 
     
+    }
+
+  
+    void _showReassignSheet(Book book){
+      showModalBottomSheet(context: context,
+      isScrollControlled: true, 
+      builder: (ctx) => ReassignBookSheet(book: book,));
     }
 
    Future<void> _importBook()async{

@@ -111,5 +111,25 @@ Future<Book?> getBookByPath(String filePath) async{
   return Book.fromMap(rows.first);
 }
 
+Future<void> reassignBook(String bookid, String? genreid, String? subgenreid) async{
+  try{
+    final db = await _db.database;
+    await db.update(
+      'books',
+      {'genreid': genreid,
+       'subgenreid': subgenreid},
+      where: 'bookid = ?',
+      whereArgs: [bookid]
+      
+      );
+
+  }
+  catch(e, st){
+    appLogger.e('Failed to reassign book', error: e, stackTrace: st);
+    rethrow;
+
+  }
+}
+
 }
 
