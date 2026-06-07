@@ -72,7 +72,7 @@ dev_dependencies:
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "assets/logo/icon_monochrome_redone_2.png"
+  image_path: "assets/logo/icon_monochrome_redone_5.png"
 
   adaptive_icon_background: "#1A0F0A"
   adaptive_icon_foreground: "assets/logo/icon_monochrome_redone_1.png"
