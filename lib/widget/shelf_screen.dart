@@ -16,6 +16,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:bookshelf/data/models/book.dart';
+import 'package:share_handler/share_handler.dart';
 import 'package:uri_to_file/uri_to_file.dart';
 import 'package:uuid/uuid.dart';
 
@@ -31,12 +32,38 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
 
     late AppLinks _appLinks;
     StreamSubscription<Uri>? _linkSubScription;
+    StreamSubscription? _shareSub;
 
     @override
     void initState(){
       super.initState();
+      // ColdStart
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_){
+          ShareHandlerPlatform.instance.getInitialSharedMedia().then((media){
+            if (media?.attachments?.isNotEmpty == true){
+            final path = media?.attachments?.first?.path;
+            if(path!= null) _handleIncomingFile(path);}
+          });
+        }
+      );
 
-     WidgetsBinding.instance.addPostFrameCallback(
+      _shareSub =  ShareHandlerPlatform.instance.sharedMediaStream.listen((media){
+        if (media.attachments?.isNotEmpty == true)
+        {final path = media.attachments!.first?.path;
+        if (path != null) _handleIncomingFile(path);}
+      });
+      _appLinks = AppLinks();
+
+      _appLinks.getInitialLink().then((uri){
+        if (uri != null) _processIncomingUri(uri);
+      });
+
+      _linkSubScription = _appLinks.uriLinkStream.listen(_processIncomingUri);
+
+      // HotStart
+
+     /* WidgetsBinding.instance.addPostFrameCallback(
       (_) {
          _appLinks = AppLinks();
 
@@ -45,11 +72,12 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
       });
 
       _linkSubScription = _appLinks.uriLinkStream.listen(_processIncomingUri);
-      });
+      }); */
     }
 
     @override
     void dispose(){
+      _shareSub?.cancel();
       _linkSubScription?.cancel();
       super.dispose();
     }
@@ -59,12 +87,13 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
 
         if(uri.scheme != 'content' && uri.scheme != 'file') return;
 
-        final path = uri.path;
-
-        if (!path.endsWith('.pdf')) return;
-
-        await _handleIncomingFile(path);  
         File file = await toFile(uri.toString());
+        
+        if (!file.path.toLowerCase().endsWith('.pdf')) {
+          appLogger.w('Ignored non-PDF file: ${file.path}');
+          return;
+          }
+
         await _handleIncomingFile(file.path);
 
       }
@@ -86,8 +115,10 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
       if (existing != null){
         if (mounted){
           Navigator.push(context, 
-          MaterialPageRoute(builder: (_)=> PdfReaderScreen(book: existing)));
+          MaterialPageRoute(builder: (_)=> 
+          PdfReaderScreen(book: existing)));
         }
+        return;
       }
 
       await File(sharedFilePath).copy(destinationPath);

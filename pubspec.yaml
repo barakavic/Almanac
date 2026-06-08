@@ -51,6 +51,7 @@ dependencies:
   share_plus: ^12.0.2
   app_links: ^6.4.1
   uri_to_file: ^1.0.0
+  share_handler: ^0.0.25
 
 dev_dependencies:
   flutter_test:
