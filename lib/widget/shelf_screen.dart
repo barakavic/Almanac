@@ -28,6 +28,7 @@ class ShelfScreen extends ConsumerStatefulWidget {
   
 }
 class _ShelfScreenState extends ConsumerState<ShelfScreen>{
+    final Set<String> _processingPaths = {};
     bool _isGridView = false;
 
     late AppLinks _appLinks;
@@ -61,19 +62,7 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
 
       _linkSubScription = _appLinks.uriLinkStream.listen(_processIncomingUri);
 
-      // HotStart
-
-     /* WidgetsBinding.instance.addPostFrameCallback(
-      (_) {
-         _appLinks = AppLinks();
-
-      _appLinks.getInitialLink().then((uri){
-        if (uri != null) _processIncomingUri(uri);
-      });
-
-      _linkSubScription = _appLinks.uriLinkStream.listen(_processIncomingUri);
-      }); */
-    }
+     }
 
     @override
     void dispose(){
@@ -111,6 +100,14 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
       final appDir = await getApplicationDocumentsDirectory();
       final destinationPath = '${appDir.path}/$fileName';
 
+      if(_processingPaths.contains(destinationPath)){
+        return;
+      }
+
+      _processingPaths.add(destinationPath);
+      
+      try{
+        
       final existing = await ref.read(bookRepositoryProvider).getBookByPath(destinationPath);
       if (existing != null){
         if (mounted){
@@ -145,7 +142,12 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
             if(mounted){
               Navigator.push(context, MaterialPageRoute(builder: (_) => PdfReaderScreen(book: newBook)));
             }
+      } finally{
+        _processingPaths.remove(destinationPath);
+
       }
+      }
+      
       catch(e,st){
         appLogger.e('Failed to process incoming File',error: e, stackTrace: st);
         if(mounted){
@@ -153,6 +155,7 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
             const SnackBar(content: Text('Failed to open shared book'))
           );
         }
+      
       }
 
     }
