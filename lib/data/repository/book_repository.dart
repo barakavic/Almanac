@@ -103,6 +103,7 @@ Future<Book?> getBookByPath(String filePath) async{
   final rows = await db.query(
     'books',
     where: 'filepath = ?',
+    whereArgs: [filePath],
     limit: 1
   );
 
