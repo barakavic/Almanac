@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class ReassignBookSheet extends ConsumerStatefulWidget{
-  final Book? book;
+  final Book book;
 
   
   const ReassignBookSheet({
-    this.book,
+    required this.book,
     super.key
   });
 
@@ -57,7 +57,7 @@ class _ReassignBooskSheetState extends ConsumerState<ReassignBookSheet>{
   Widget build(BuildContext context) {
     final genresAsync = ref.watch(genreProvider);
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
 
       child: SafeArea(
         child: Column(
@@ -101,6 +101,24 @@ class _ReassignBooskSheetState extends ConsumerState<ReassignBookSheet>{
               ),
               
               if (_selectedGenreId != null)
+              ref.watch(subGenresByGenreProvider(_selectedGenreId!)).when(
+                data: (subgenres) => 
+                subgenres.isEmpty ? 
+                const SizedBox.shrink() : 
+                Wrap(
+                  spacing: 8,
+                  children: subgenres.map((s) => ChoiceChip(
+                    label: Text(s.subgenrename), 
+                    selected: _selectedSubgenreId == s.subgenreid,
+                    onSelected: (selected) => setState(() {
+                      _selectedSubgenreId = selected ? s.subgenreid : null;
+                    }),
+                    )).toList(),
+
+                ), 
+                error: (err, stack) => const SizedBox.shrink(), 
+                loading:  () => const LinearProgressIndicator(),
+                ),
 
               const SizedBox(
                 height: 24,
