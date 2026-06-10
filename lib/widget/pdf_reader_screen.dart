@@ -74,6 +74,10 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> with WidgetsB
     WidgetsBinding.instance.removeObserver(this);
     _debounce?.cancel();
     _pdfViewerController.dispose();
+
+    PaintingBinding.instance.imageCache.clear();
+    PaintingBinding.instance.imageCache.clearLiveImages();
+
     super.dispose();
   }
 
@@ -92,9 +96,10 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> with WidgetsB
         canShowScrollHead: false,
         controller: _pdfViewerController,
         initialPageNumber: book.lastpageread == 0 ? 1 : book.lastpageread,
+        // pageLayoutMode: PdfPageLayoutMode.single,
         onPageChanged: (PdfPageChangedDetails details) {
           _currentPage = details.newPageNumber;
-          // _debounce?.cancel();
+          _debounce?.cancel();
           _debounce = Timer(const Duration(seconds: 2), ()=> _saveCurrentPage());
         },
         onTextSelectionChanged: (
