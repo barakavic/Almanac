@@ -1,15 +1,13 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:bookshelf/widget/import_genre_picker_sheet.dart';
 import 'package:bookshelf/widget/shelf/unsorted_books_section.dart';
 import 'package:bookshelf/widget/shelf/currently_reading_section.dart';
 import 'package:bookshelf/widget/shelf/genre_books_section.dart';
 import 'package:app_links/app_links.dart';
-import 'package:bookshelf/data/models/genre.dart';
 import 'package:bookshelf/data/providers.dart';
 import 'package:bookshelf/utils/app_logger.dart';
-import 'package:bookshelf/widget/genre_divider.dart';
-import 'package:bookshelf/widget/book_spine.dart';
 import 'package:bookshelf/widget/genre_management_screen.dart';
 import 'package:bookshelf/widget/pdf_reader_screen.dart';
 import 'package:bookshelf/widget/reassign_book_sheet.dart';
@@ -191,6 +189,18 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
 
     await File(sourcePath).copy(destPath);
 
+    if (!mounted) return;
+
+    final selectedGenres = await showModalBottomSheet<Map<String, String?>>(
+      context: context, 
+      builder: (ctx) => const ImportGenrePickerSheet(),
+      );
+
+      final genreid = selectedGenres?['genreid'];
+      final subgenreid = selectedGenres?['subgenreid'];
+
+    
+
     final newBook = Book(
       bookid: const Uuid().v4(),
       title: filename.replaceAll(RegExp(r'\.pdf$', caseSensitive: false), ''),
@@ -200,6 +210,8 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
       lastpageread: 0,
       totalpages: 0,
       isarchived: false,
+      genreid: genreid,
+      subgenreid: subgenreid,
       addedat: DateTime.now(),      
     );
 
