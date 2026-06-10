@@ -5,11 +5,11 @@ import 'package:flutter/material.dart';
 
 class CurrentlyReadingSection extends StatelessWidget {
   final List<Book> books;
-  final Function(Book) onReassignBook;
+  final Function(Book) onLongPressBook;
 
   const CurrentlyReadingSection({
     required this.books,
-    required this.onReassignBook,
+    required this.onLongPressBook,
     super.key,
   });
 
@@ -36,48 +36,7 @@ class CurrentlyReadingSection extends StatelessWidget {
               return Padding(
                 padding: const EdgeInsets.only(right: 16.0),
                 child: GestureDetector(
-                  onLongPress: () {
-                    showModalBottomSheet(
-                      context: context,
-                      builder: (ctx) => SafeArea(
-                        child: Wrap(
-                          children: [
-                            ListTile(
-                              leading: const Icon(Icons.open_in_new),
-                              title: const Text('Open'),
-                              onTap: () {
-                                Navigator.pop(ctx);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (_) => PdfReaderScreen(book: book)),
-                                );
-                              },
-                            ),
-                            ListTile(
-                              leading: const Icon(Icons.archive),
-                              title: const Text('Archive'),
-                              onTap: () {
-                                Navigator.pop(ctx);
-                              },
-                            ),
-                            ListTile(
-                              leading: const Icon(Icons.close),
-                              title: const Text('Cancel'),
-                              onTap: () => Navigator.pop(ctx),
-                            ),
-                            ListTile(
-                              leading: const Icon(Icons.swap_horiz),
-                              title: const Text('Reassign'),
-                              onTap: () {
-                                Navigator.pop(ctx);
-                                onReassignBook(book);
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
+                  onLongPress: () => onLongPressBook(book),
                   child: BookSpine(
                     book: book,
                     onTap: () {

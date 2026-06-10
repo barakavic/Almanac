@@ -26,14 +26,14 @@ class _ReassignBooskSheetState extends ConsumerState<ReassignBookSheet>{
   @override
   void initState(){
     super.initState();
-    _selectedGenreId = widget.book?.genreid;
-    _selectedSubgenreId = widget.book?.subgenreid;
+    _selectedGenreId = widget.book.genreid;
+    _selectedSubgenreId = widget.book.subgenreid;
 
   }
 
   Future<void> _confirmReassignment() async{
     await ref.read(bookRepositoryProvider).reassignBook(
-      widget.book!.bookid, 
+      widget.book.bookid, 
       _selectedGenreId, 
       _selectedSubgenreId);
 
@@ -66,7 +66,7 @@ class _ReassignBooskSheetState extends ConsumerState<ReassignBookSheet>{
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Reassign "${widget.book?.title}"',
+              'Reassign "${widget.book.title}"',
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold
@@ -92,7 +92,7 @@ class _ReassignBooskSheetState extends ConsumerState<ReassignBookSheet>{
                         _selectedSubgenreId = null;
                       });
                      },
-                     )).toList()
+                     ))
                 ],
               ), error: (err, stack) => Text('Error: $err'), loading: () => const CircularProgressIndicator()),
 

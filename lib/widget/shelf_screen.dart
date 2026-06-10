@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:bookshelf/widget/book_actions_sheet.dart';
 import 'package:bookshelf/widget/import_genre_picker_sheet.dart';
 import 'package:bookshelf/widget/shelf/unsorted_books_section.dart';
 import 'package:bookshelf/widget/shelf/currently_reading_section.dart';
@@ -10,7 +11,6 @@ import 'package:bookshelf/data/providers.dart';
 import 'package:bookshelf/utils/app_logger.dart';
 import 'package:bookshelf/widget/genre_management_screen.dart';
 import 'package:bookshelf/widget/pdf_reader_screen.dart';
-import 'package:bookshelf/widget/reassign_book_sheet.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -163,11 +163,13 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
 
   
 
-    void _showReassignSheet(Book book){
-      showModalBottomSheet(context: context,
-      isScrollControlled: true, 
-      builder: (ctx) => ReassignBookSheet(book: book,));
-    }
+void _showBookActions(Book book){
+  showModalBottomSheet(
+    context: context, 
+    builder: 
+    (ctx)=> BookActionsSheet(book: book),
+    );
+}
 
    Future<void> _importBook()async{
     try{
@@ -275,15 +277,16 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
                 children: [
                   CurrentlyReadingSection(
                     books: books,
-                    onReassignBook: _showReassignSheet,
+                    onLongPressBook: _showBookActions,
                   ),
                   UnsortedBooksSection(
                     books: books,
-                    onLongPressBook: _showReassignSheet,
+                    onLongPressBook: _showBookActions,
                   ),
                   ...genres.map((genre) => GenreBooksSection(
                     genre: genre,
                     books: books,
+                    onLongPressBook: _showBookActions,
                   )),
                 ],
               );

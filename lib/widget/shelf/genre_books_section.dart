@@ -8,10 +8,12 @@ import 'package:flutter/material.dart';
 class GenreBooksSection extends StatelessWidget {
   final Genre genre;
   final List<Book> books;
+  final Function(Book) onLongPressBook;
 
   const GenreBooksSection({
     required this.genre,
     required this.books,
+    required this.onLongPressBook,
     super.key,
   });
 
@@ -48,7 +50,9 @@ class GenreBooksSection extends StatelessWidget {
               ...genreBooks.map((book) {
                 return Padding(
                   padding: const EdgeInsets.only(right: 16.0),
-                  child: BookSpine(
+                  child: GestureDetector(
+                    onLongPress: () => onLongPressBook(book),
+                    child: BookSpine(
                     book: book,
                     onTap: () {
                       Navigator.push(
@@ -56,7 +60,7 @@ class GenreBooksSection extends StatelessWidget {
                         MaterialPageRoute(builder: (_) => PdfReaderScreen(book: book)),
                       );
                     },
-                  ),
+                  ),)
                 );
               }),
             ],
