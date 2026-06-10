@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:bookshelf/widget/shelf/unsorted_books_section.dart';
+import 'package:bookshelf/widget/shelf/currently_reading_section.dart';
+import 'package:bookshelf/widget/shelf/genre_books_section.dart';
 import 'package:app_links/app_links.dart';
 import 'package:bookshelf/data/models/genre.dart';
 import 'package:bookshelf/data/providers.dart';
@@ -160,201 +163,8 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
 
     }
 
-    Widget _buildUnassignedSection(List<Book> allBooks) {
-    final unassignedBooks = allBooks.where((b) => b.genreid == null && !b.isarchived).toList();
-    
-    if (unassignedBooks.isEmpty) return const SizedBox.shrink();
-
-    
-
-   
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: Text("Unsorted Books", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-        ),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Row(
-            children: unassignedBooks.map((book) {
-              return GestureDetector( 
-                onLongPress: () => _showReassignSheet(book),
-                child: Padding(
-                padding: const EdgeInsets.only(right: 16.0),
-                child: BookSpine(book: book, onTap: () {
-                  Navigator.push(context, 
-                  MaterialPageRoute(builder: (_) => PdfReaderScreen(book: book)) 
-                  );
-                }),
-              ));
-            }).toList(),
-          ),
-        ),
-      ],
-    );
-  }
-
-
-      Widget _buildCurrentlyReadingSection(List<Book> allBooks){
-        final currentlyReading = allBooks.where((b)=>b.lastpageread > 0 && !b.isarchived).toList();
-
-        if (currentlyReading.isEmpty){
-        return const SizedBox.shrink();
-        }
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Padding(padding: EdgeInsets.symmetric(
-              horizontal: 24, vertical: 16
-            ),
-            child: Text('Currently Reading',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold
-            ),
-            ),
-            
-            ),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24,
-                
-              ),
-              child: Row(
-                children: currentlyReading.map((book){
-                  return GestureDetector( 
-                  onLongPress: () => _showReassignSheet(book),  
-                  child: Padding(padding: const EdgeInsets.only(right: 16.0),
-                  child: GestureDetector(
-                    onLongPress: (){
-                      showModalBottomSheet(context: context, 
-                      builder: (ctx)=> SafeArea(child: 
-                      Wrap(
-                        children: [
-                          ListTile(
-                            leading: Icon(Icons.open_in_new),
-                            title: Text('Open'),
-                            onTap: (){
-                              Navigator.pop(ctx);
-                              Navigator.push(context, MaterialPageRoute(builder: (_)=> PdfReaderScreen(book: book)));
-
-                            },
-                          ),
-                          ListTile(
-                            leading: Icon(Icons.archive),
-                            title: Text('Archive'),
-                            onTap: (){
-                              Navigator.pop(ctx);
-                            },
-                          ),
-                          ListTile(
-                            leading: Icon(Icons.close),
-                            title: Text('Cancel'),
-                            onTap: () {Navigator.pop(ctx);},
-                          ),
-                          ListTile(
-                            leading: const Icon(Icons.swap_horiz),
-                            title: const Text('Reassign'),
-                            onTap: (){
-                              Navigator.pop(ctx);
-                              _showReassignSheet(book);
-                            },
-                          )
-                        ],
-
-
-                      )
-                      ));
-                      
-                    },
-                    child: BookSpine(book: book, onTap: (){
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => PdfReaderScreen(book: book)));
-                    }),
-                  )
-                  ),
-                  );
-                }).toList(),
-              ),
-            )
-            
-          ],
-        );
-      }
-
-    Widget _buildGenreSection(Genre genre, List<Book> allBooks){
-      final genreBooks = allBooks.where((b)=> b.genreid 
-      == genre.genreid && !b.isarchived
-      ).toList();
-      if (genreBooks.isEmpty) return const SizedBox.shrink();
-
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          GestureDetector(
-            onTap: () {
-             /*  Navigator.push(context, MaterialPageRoute(builder: (_)=> GenreDetailScreen(genre: genre)
-              )
-              ); */
-            },
-            child: Padding(padding: EdgeInsets.symmetric(
-              horizontal: 24, vertical: 16
-
-            ),
-            child: Row(
-              children: [
-                Text(genre.name, 
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold
-                ),
-                ),
-                const SizedBox(
-                  width: 8,
-                ),
-                const Icon(Icons.chevron_right, size: 20,),
-
-              ],
-            ),
-            ),
-          ),
-          SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(
-          horizontal: 24, vertical: 16
-        ),
-        child: Row(
-          children: [
-            GenreDivider(genre: genre),
-            const SizedBox(width: 16,),
-            ...genreBooks.map((book){
-              return Padding(padding: EdgeInsets.only(
-                right: 16.0
-              ),
-              child: BookSpine(book: book, onTap: (){
-                Navigator.push(context, 
-                MaterialPageRoute(builder: (_)=> PdfReaderScreen(book: book)
-                ),
-                );
-
-              }
-              // 
-              ),
-              );
-            })
-          ],
-        ),
-      ),
-        ],
-      );
-
-    
-    }
-
   
+
     void _showReassignSheet(Book book){
       showModalBottomSheet(context: context,
       isScrollControlled: true, 
@@ -448,19 +258,26 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
           return genreAsync.when(
             loading: () => const Center(child: SpinKitThreeBounce(color: Colors.blue,)),
             error: (err, stack) => Center(child: Text('Error, $err')),
-            data: (genres) {
-              return Center(
-                child: ListView(
-                  children: [
-                    _buildCurrentlyReadingSection(books),
-                    for (final genre in genres)
-                    _buildGenreSection(genre, books),
-                    _buildUnassignedSection(books),
-                  ],
-                )
+                        data: (genres) {
+              return ListView(
+                children: [
+                  CurrentlyReadingSection(
+                    books: books,
+                    onReassignBook: _showReassignSheet,
+                  ),
+                  UnsortedBooksSection(
+                    books: books,
+                    onLongPressBook: _showReassignSheet,
+                  ),
+                  ...genres.map((genre) => GenreBooksSection(
+                    genre: genre,
+                    books: books,
+                  )),
+                ],
               );
             },
-          );
+
+            );
         },
       ),
       floatingActionButton: FloatingActionButton(
