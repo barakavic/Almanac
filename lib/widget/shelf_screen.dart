@@ -126,7 +126,7 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
           RegExp(r'\.pdf$', caseSensitive: false
           ),
            ''), 
-           author: 'Unkown Author', 
+           author: 'Unknown Author', 
            filepath: destinationPath, 
            spinecolor: Colors.primaries[DateTime.now().second % Colors.primaries.length].value,
             lastpageread: 0, 
