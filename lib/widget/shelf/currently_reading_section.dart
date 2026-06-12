@@ -35,9 +35,22 @@ class CurrentlyReadingSection extends StatelessWidget {
             children: currentlyReading.map((book) {
               return Padding(
                 padding: const EdgeInsets.only(right: 16.0),
-                child: GestureDetector(
-                  onLongPress: () => onLongPressBook(book),
-                  child: BookSpine(
+                  child: Draggable<Book>(
+                    feedback: Material(
+                      color: Colors.transparent,
+                      child: Opacity(opacity: 0.75,
+                      child: BookSpine(book: book, onTap: (){}
+                      ),
+                      ),
+                    ),
+                    childWhenDragging: Opacity(opacity: 0.3,
+                    child: BookSpine(book: book, onTap: (){
+                      
+                    }),
+                    ),
+                    child: GestureDetector(
+                    onLongPress: () => onLongPressBook(book),
+                    child: BookSpine(
                     book: book,
                     onTap: () {
                       Navigator.push(
@@ -45,9 +58,9 @@ class CurrentlyReadingSection extends StatelessWidget {
                         MaterialPageRoute(builder: (_) => PdfReaderScreen(book: book)),
                       );
                     },
-                  ),
-                ),
-              );
+                  ),)
+                    )
+                 );
             }).toList(),
           ),
         ),

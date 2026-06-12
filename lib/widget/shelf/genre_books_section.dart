@@ -9,11 +9,13 @@ class GenreBooksSection extends StatelessWidget {
   final Genre genre;
   final List<Book> books;
   final Function(Book) onLongPressBook;
+  final Function(Book book, Genre targetGenre) onDropBook;
 
   const GenreBooksSection({
     required this.genre,
     required this.books,
     required this.onLongPressBook,
+    required this.onDropBook,
     super.key,
   });
 
@@ -27,19 +29,36 @@ class GenreBooksSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
+        DragTarget<Book>(
+          onAcceptWithDetails: (details) => onDropBook(details.data, genre),
+          builder: (context, candidateData, rejectedData) 
+          {
+            final isHovering = candidateData.isNotEmpty;
+            return Container(
+          color: 
+          isHovering ? Colors.white.withOpacity
+          (0.1) : Colors.transparent,
+          child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           child: Row(
             children: [
               Text(
                 genre.name,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 20, 
+                  fontWeight: FontWeight.bold
+                  ),
               ),
-              const SizedBox(width: 8),
-              const Icon(Icons.chevron_right, size: 20),
+              const SizedBox(
+                width: 8
+                ),
+              const Icon(
+                Icons.chevron_right, 
+                size: 20
+                ),
             ],
           ),
-        ),
+        ));},),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -50,7 +69,20 @@ class GenreBooksSection extends StatelessWidget {
               ...genreBooks.map((book) {
                 return Padding(
                   padding: const EdgeInsets.only(right: 16.0),
-                  child: GestureDetector(
+                  child: Draggable<Book>(
+                    feedback: Material(
+                      color: Colors.transparent,
+                      child: Opacity(opacity: 0.75,
+                      child: BookSpine(book: book, onTap: (){}
+                      ),
+                      ),
+                    ),
+                    childWhenDragging: Opacity(opacity: 0.3,
+                    child: BookSpine(book: book, onTap: (){
+                      
+                    }),
+                    ),
+                    child: GestureDetector(
                     onLongPress: () => onLongPressBook(book),
                     child: BookSpine(
                     book: book,
@@ -61,6 +93,7 @@ class GenreBooksSection extends StatelessWidget {
                       );
                     },
                   ),)
+                    )
                 );
               }),
             ],

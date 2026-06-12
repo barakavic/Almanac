@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:bookshelf/data/models/genre.dart';
 import 'package:bookshelf/widget/book_actions_sheet.dart';
 import 'package:bookshelf/widget/import_genre_picker_sheet.dart';
 import 'package:bookshelf/widget/shelf/unsorted_books_section.dart';
@@ -91,6 +92,17 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
         appLogger.e('Failed to process File $e', error: e, stackTrace: st);
       }
 
+    }
+
+    Future<void> _handleBookDrop(Book book, Genre targetGenre) async{
+      await ref.read(bookRepositoryProvider).reassignBook(
+        book.bookid, 
+        targetGenre.genreid, 
+        null
+        );
+
+      ref.invalidate(booksProvider);
+      ref.invalidate(booksByGenreProvider(targetGenre.genreid));
     }
 
     Future<void> _handleIncomingFile(String sharedFilePath) async{
@@ -272,7 +284,7 @@ void _showBookActions(Book book){
           return genreAsync.when(
             loading: () => const Center(child: SpinKitThreeBounce(color: Colors.blue,)),
             error: (err, stack) => Center(child: Text('Error, $err')),
-                        data: (genres) {
+              data: (genres) {
               return ListView(
                 children: [
                   CurrentlyReadingSection(
@@ -283,10 +295,55 @@ void _showBookActions(Book book){
                     books: books,
                     onLongPressBook: _showBookActions,
                   ),
+                  if (genres.isEmpty)
+                  Padding(
+                    padding: const 
+                    EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 32
+                      ),
+                      child: Column(
+                        children: [
+                          const Icon(
+                            Icons.category_outlined, 
+                            size: 48, 
+                            color: Colors.white30,
+                            ),
+
+                            const SizedBox(
+                              height: 12,
+                            ),
+                            const Text(
+                              'No Genres Yet',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white54,
+                              ),
+                            ),
+                            const SizedBox(
+                              height: 16,
+                            ),
+                            OutlinedButton.icon(onPressed: ()=> Navigator.push(
+                              context, 
+                              MaterialPageRoute(
+                                builder: (context) => const 
+                                GenreManagementScreen())), 
+                                label: const Text('Create a Genre',
+                                style: TextStyle(
+                                  color: Colors.white38
+                                ),
+                                ),
+                                ),
+                        ],
+                      ),
+                    )
+                  else
                   ...genres.map((genre) => GenreBooksSection(
                     genre: genre,
                     books: books,
                     onLongPressBook: _showBookActions,
+                    onDropBook: _handleBookDrop,
                   )),
                 ],
               );
