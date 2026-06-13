@@ -95,6 +95,7 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
     }
 
     Future<void> _handleBookDrop(Book book, Genre targetGenre) async{
+      final oldGenreId = book.genreid;
       await ref.read(bookRepositoryProvider).reassignBook(
         book.bookid, 
         targetGenre.genreid, 
@@ -103,6 +104,11 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
 
       ref.invalidate(booksProvider);
       ref.invalidate(booksByGenreProvider(targetGenre.genreid));
+
+      if(oldGenreId != null){
+        ref.invalidate(booksByGenreProvider(oldGenreId));
+
+      }
     }
 
     Future<void> _handleIncomingFile(String sharedFilePath) async{

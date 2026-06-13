@@ -9,7 +9,7 @@ class GenreBooksSection extends StatelessWidget {
   final Genre genre;
   final List<Book> books;
   final Function(Book) onLongPressBook;
-  final Function(Book book, Genre targetGenre) onDropBook;
+  final Future<void> Function(Book book, Genre targetGenre) onDropBook;
 
   const GenreBooksSection({
     required this.genre,
@@ -30,7 +30,9 @@ class GenreBooksSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DragTarget<Book>(
-          onAcceptWithDetails: (details) => onDropBook(details.data, genre),
+          onAcceptWithDetails: (details) async  { 
+            debugPrint('DROP FIRED : ${details.data.title} -> ${genre.name}');
+            await onDropBook(details.data, genre);},
           builder: (context, candidateData, rejectedData) 
           {
             final isHovering = candidateData.isNotEmpty;
@@ -70,6 +72,7 @@ class GenreBooksSection extends StatelessWidget {
                 return Padding(
                   padding: const EdgeInsets.only(right: 16.0),
                   child: Draggable<Book>(
+                    data: book,
                     feedback: Material(
                       color: Colors.transparent,
                       child: Opacity(opacity: 0.75,

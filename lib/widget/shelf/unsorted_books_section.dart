@@ -34,6 +34,7 @@ class UnsortedBooksSection extends StatelessWidget {
           child: Row(
             children: unassignedBooks.map((book) {
               return Draggable<Book>(
+                    data: book,
                     feedback: Material(
                       color: Colors.transparent,
                       child: Opacity(opacity: 0.75,

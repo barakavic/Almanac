@@ -36,6 +36,7 @@ class CurrentlyReadingSection extends StatelessWidget {
               return Padding(
                 padding: const EdgeInsets.only(right: 16.0),
                   child: Draggable<Book>(
+                    data: book,
                     feedback: Material(
                       color: Colors.transparent,
                       child: Opacity(opacity: 0.75,
