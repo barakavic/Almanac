@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:bookshelf/data/models/genre.dart';
+import 'package:bookshelf/widget/GridView/grid_view.dart';
 import 'package:bookshelf/widget/book_actions_sheet.dart';
 import 'package:bookshelf/widget/import_genre_picker_sheet.dart';
 import 'package:bookshelf/widget/shelf/unsorted_books_section.dart';
@@ -285,7 +286,7 @@ void _showBookActions(Book book){
         error: (err, stack) => Center(child: Text('Error, $err')),
         data: (books) {
           if (_isGridView){
-            return const Center(child: Text('Grid view is coming soon'),);
+            return GridViewScreen(onBookLongPress: _showBookActions);
           }
           return genreAsync.when(
             loading: () => const Center(child: SpinKitThreeBounce(color: Colors.blue,)),
