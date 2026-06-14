@@ -33,6 +33,8 @@ class PdfReaderScreen extends ConsumerStatefulWidget{
 }
 
 class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> with WidgetsBindingObserver{
+
+
   
    final PdfViewerController _pdfViewerController = PdfViewerController();
    late final _initialPage;
@@ -41,6 +43,10 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> with WidgetsB
    String? _selectedText;
    final ScreenshotController _screenshotController = ScreenshotController();
    bool _isDarkMode = false;
+
+   bool _showScrollHead = true;
+   PdfScrollDirection _pdfScrollDirection = PdfScrollDirection.vertical;
+   PdfPageLayoutMode _layoutMode = PdfPageLayoutMode.continuous;
 
    Future<void> _saveCurrentPage() async{
     if (_currentPage == _initialPage) return;
@@ -93,10 +99,11 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> with WidgetsB
     final book  = widget.book;
     final pdfViewer = SfPdfViewer.file(
         File(book.filepath),
-        canShowScrollHead: false,
+        canShowScrollHead: _showScrollHead,
         controller: _pdfViewerController,
+        scrollDirection: _pdfScrollDirection,
+        pageLayoutMode: _layoutMode,
         initialPageNumber: book.lastpageread == 0 ? 1 : book.lastpageread,
-        // pageLayoutMode: PdfPageLayoutMode.single,
         onPageChanged: (PdfPageChangedDetails details) {
           _currentPage = details.newPageNumber;
           _debounce?.cancel();
@@ -124,12 +131,9 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> with WidgetsB
       appBar: AppBar(
         title: Text(book.title),
         actions: [
-          IconButton(onPressed: (){
-            setState(() {
-              _isDarkMode = !_isDarkMode;
-            });
-          }, 
-          icon: Icon(_isDarkMode? Icons.light_mode : Icons.dark_mode))
+          IconButton(onPressed: _showReaderSettings, 
+          icon: Icon(Icons.more_vert)
+          )
         ],
       ),
       body: _isDarkMode ? ColorFiltered(
@@ -169,5 +173,86 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> with WidgetsB
     },
     );
   }
+
+   void _showReaderSettings(){
+      showModalBottomSheet(context: context, builder: (ctx) => StatefulBuilder(builder: (context, setSheetState){
+        return SafeArea(child: Wrap(
+          children: [
+            SwitchListTile(
+              title: const Text('Dark Mode'),
+              value: _isDarkMode,
+              onChanged: (val) {
+                setState(() => _isDarkMode = val);
+                setSheetState(() {});
+              },
+            ),
+            SwitchListTile(
+              title: const Text('Show Scroll Head'),
+              value: _showScrollHead,
+              onChanged: (val){
+                setState(()=> _showScrollHead =val);
+                setSheetState(() {});
+              },
+              ),
+            ListTile(
+              title: const Text('Scroll Mode'),
+              subtitle: Text(
+                _layoutMode == PdfPageLayoutMode.continuous 
+                ? 'Continuous' :  'Single Page'
+                ),
+                trailing: DropdownButton<PdfPageLayoutMode>(
+                  value: _layoutMode,
+                  items: const [
+                    DropdownMenuItem(
+                      value: PdfPageLayoutMode.continuous,
+                      child: Text(
+                        'Continuous'
+                        ),),
+                    DropdownMenuItem(
+                      value: PdfPageLayoutMode.single,
+                      child: Text('Single page'), 
+                      ),
+
+                ],
+                onChanged: (val){
+                  if ( val != null){
+                    setState (() => _layoutMode = val);
+                    setSheetState((){});
+
+                  }
+                },
+                )
+            ),
+
+            ListTile(
+              title: const Text('Scroll Direction'),
+              subtitle: Text(
+                _pdfScrollDirection == PdfScrollDirection.vertical ? 'Vertical': 'Horizontal'
+                ),
+              trailing: DropdownButton<PdfScrollDirection>(
+                value: _pdfScrollDirection,
+                items: [
+                  DropdownMenuItem(
+                    value: PdfScrollDirection.vertical,
+                    child: Text('Vertical'),
+                    ),
+                    DropdownMenuItem(value: PdfScrollDirection.horizontal,
+                    child: Text('Horizontal'),
+                    ),
+                ],
+                onChanged: (val){
+                  if (val != null){
+                    setState(() => _pdfScrollDirection = val);
+                    setSheetState((){});
+                  }
+                },
+              ),
+            )
+          ],
+
+        )
+        );
+      }));
+    }
 
 }
