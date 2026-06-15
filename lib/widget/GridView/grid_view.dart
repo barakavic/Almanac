@@ -70,6 +70,8 @@ class _BookGridCard extends StatelessWidget{
     LinearProgressIndicator gridProgressIndicator = LinearProgressIndicator(
       value: book.totalpages == 0 ? 0.0 :
       (book.lastpageread/book.totalpages).clamp(0.0, 1.0) ,
+      minHeight: 8.2,
+      borderRadius: BorderRadius.circular(4),
     );
     
     return Material(
@@ -130,7 +132,9 @@ class _BookGridCard extends StatelessWidget{
               ),
 
               const Spacer(),
-              gridProgressIndicator,
+              Padding(padding: EdgeInsetsGeometry.fromLTRB(12, 0, 12, 12),
+              child: gridProgressIndicator
+              ),
               Padding(padding: EdgeInsets.fromLTRB(12, 0, 12, 12),
               
               child: Text(
