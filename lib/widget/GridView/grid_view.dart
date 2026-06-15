@@ -66,6 +66,11 @@ class _BookGridCard extends StatelessWidget{
 
   @override
   Widget build(BuildContext context) {
+
+    LinearProgressIndicator gridProgressIndicator = LinearProgressIndicator(
+      value: book.totalpages == 0 ? 0.0 :
+      (book.lastpageread/book.totalpages).clamp(0.0, 1.0) ,
+    );
     
     return Material(
       color: Theme.of(context).cardColor,
@@ -125,7 +130,9 @@ class _BookGridCard extends StatelessWidget{
               ),
 
               const Spacer(),
+              gridProgressIndicator,
               Padding(padding: EdgeInsets.fromLTRB(12, 0, 12, 12),
+              
               child: Text(
                 '${book.lastpageread}/${book.totalpages} pages',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey)
