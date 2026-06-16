@@ -14,7 +14,7 @@ class DbHelper {
     try{
     final dir= await getApplicationDocumentsDirectory();
     final path= join(dir.path, 'bookshelf.db');
-    return openDatabase(path, version: 1, onCreate: _onCreate);
+    return openDatabase(path, version: 2, onCreate: _onCreate, onUpgrade: _onUpgrade);
     }
     catch(e, st){
       appLogger.e('Failed to open database', error: e, stackTrace: st);
@@ -94,5 +94,26 @@ class DbHelper {
       rethrow;
     }
 
+  }
+  Future<void> _onUpgrade (Database db, int oldVersion, int newVersion) async{
+    if (oldVersion < 2){
+      try { await db.execute('''
+      CREATE TABLE chapter(
+      chapterid text PRIMARY KEY,
+      bookid TEXT,
+      title TEXT,
+      chapterswatchcolor INTEGER,
+      chapterstartpagenumber INTEGER,
+      chapterendpagenumber INTEGER,
+      chapterorder INTEGER,
+      FOREIGN KEY (bookid) REFERENCES book(bookid) ON DELETE CASCADE
+      );
+
+      ''');}
+catch(e, st){
+  appLogger.e('Failed to create chapter database', error: e, stackTrace: st);
+  rethrow;
+}
+    }
   }
 }
