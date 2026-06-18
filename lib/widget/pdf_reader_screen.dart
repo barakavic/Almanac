@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:bookshelf/data/models/book.dart';
+import 'package:bookshelf/data/models/chapters.dart';
 import 'package:bookshelf/data/providers.dart';
 import 'package:bookshelf/utils/app_logger.dart';
 import 'package:bookshelf/widget/PdfReaderComponent/quote_card.dart';
@@ -12,6 +13,8 @@ import 'package:share_plus/share_plus.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'dart:io';
 
+import 'package:uuid/uuid.dart';
+
 const List<double> invertColorMatrix = <double>[
   -1.0, 0.0, 0.0, 0.0, 255.0,
   0.0, -1.0, 0.0, 0.0, 255.0,
@@ -20,9 +23,9 @@ const List<double> invertColorMatrix = <double>[
 ];
 class PdfReaderScreen extends ConsumerStatefulWidget{
   final Book book;
-  
+  final Chapter? chapter;
 
-  const PdfReaderScreen({super.key, required this.book});
+  const PdfReaderScreen({super.key, required this.book, this.chapter});
   
   @override
   ConsumerState<PdfReaderScreen> createState() => _PdfReaderScreenState();
@@ -116,14 +119,59 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> with WidgetsB
             _selectedText = details.selectedText;
           });
         },
-        onDocumentLoaded: (PdfDocumentLoadedDetails details) {
+        onDocumentLoaded: (PdfDocumentLoadedDetails details) async {
           final totalpages = details.document.pages.count;
 
           if (widget.book.totalpages == 0){
             ref.read(bookRepositoryProvider).updateBookTotalPages(widget.book.bookid, totalpages);
           }
 
-        },
+          final existingChapters = await ref.read(
+            chaptersByBookProvider(widget.book.bookid).future
+          );
+
+          if (existingChapters.isEmpty){
+            try{
+              final chapterRepository = ref.read(chaptersRepositoryProvider);
+
+              int chapterOrder = 0;
+
+              final bookmarkList = details.document.bookmarks as List?;
+
+              if (bookmarkList != null && bookmarkList.isNotEmpty){
+                for (final bookmark in bookmarkList){
+                  chapterOrder ++;
+
+                  final chapter = Chapter(
+                    chapterid: Uuid().v4(), 
+                    bookid: widget.book.bookid, 
+                    title: bookmark.title, 
+                    chapterstartpagenumber: bookmark.pageIndex +1, 
+                    chapterendpagenumber: 0, 
+                    chapterorder: chapterOrder
+                    );
+                  await chapterRepository.addChapter(chapter) ;
+
+                }
+              }
+
+              ref.invalidate(chaptersByBookProvider(widget.book.bookid));
+
+
+            }
+
+            catch(e, st){
+              appLogger.e('Failed to extract chapters from bookmarks',
+              error: e,
+               stackTrace: st
+              );
+              rethrow;
+            }
+          }
+          
+          }
+          
+      
 
         
       );
