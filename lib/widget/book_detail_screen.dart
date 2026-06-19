@@ -45,7 +45,12 @@ with SingleTickerProviderStateMixin{
 
 
     final chaptersAsync = ref.watch(chaptersByBookProvider(widget.book.bookid));
-    final booksbyGenreAsync =  ref.watch(booksByGenreProvider(widget.book.bookid));
+    final genreColorAsync =  ref.watch(genreColorByBookProvider(widget.book.bookid));
+    final containerColor = genreColorAsync.
+    valueOrNull != null? 
+    Color(genreColorAsync.valueOrNull!) : 
+    Theme.of(context).
+    colorScheme.surfaceContainerHighest;
   
     return Scaffold(
       appBar: AppBar(
@@ -63,7 +68,7 @@ with SingleTickerProviderStateMixin{
           children: [
             Container(
               decoration: BoxDecoration(
-                color: Color(widget.book.spinecolor)
+                color: containerColor.withOpacity(0.14)
                 ),
               
               child: Column(
