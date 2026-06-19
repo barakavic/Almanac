@@ -132,9 +132,21 @@ Future<void> reassignBook(String bookid, String? genreid, String? subgenreid) as
   }
 }
 
-/* Future<void> getGenreColorByBook(String bookid, String? genreid) async{
+Future<int?> getGenreColorByBook(String bookid) async{
   try{
     final db = await _db.database;
+    final rows  = await db.rawQuery('''
+      SELECT genre.genreColor
+      FROM books
+      INNER JOIN genre ON books.bookid = genre.genreid
+      WHERE books.bookid = ? 
+      LIMIT 1
+
+''', [bookid]);
+
+  if (rows.isEmpty) return null;
+
+  return rows.first['genreColor'] as int?;
     
 
   }
@@ -143,6 +155,6 @@ Future<void> reassignBook(String bookid, String? genreid, String? subgenreid) as
     rethrow;
   }
 }
- */
+
 }
 

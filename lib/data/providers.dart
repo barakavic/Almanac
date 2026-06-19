@@ -63,3 +63,7 @@ final chaptersByBookProvider =
         ).getChaptersByBook(bookid);
     }
   );
+
+final genreColorByBookProvider = FutureProvider.family<int?, String>((ref, bookid){
+  return ref.watch(bookRepositoryProvider).getGenreColorByBook(bookid);
+});
