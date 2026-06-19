@@ -132,5 +132,17 @@ Future<void> reassignBook(String bookid, String? genreid, String? subgenreid) as
   }
 }
 
+/* Future<void> getGenreColorByBook(String bookid, String? genreid) async{
+  try{
+    final db = await _db.database;
+    
+
+  }
+  catch(e, st){
+    appLogger.e('Failed to get color by book', error: e, stackTrace: st);
+    rethrow;
+  }
+}
+ */
 }
 

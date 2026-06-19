@@ -44,7 +44,8 @@ class DbHelper {
     await db.execute(""" CREATE TABLE genre( 
     genreid TEXT PRIMARY KEY, 
     name TEXT, 
-    genreColor INTEGER);
+    genreColor INTEGER
+    );
      """);
 
     await db.execute(""" CREATE TABLE subgenre( 

@@ -1,4 +1,5 @@
 import 'package:bookshelf/data/models/book.dart';
+import 'package:bookshelf/data/models/genre.dart';
 import 'package:bookshelf/data/providers.dart';
 import 'package:bookshelf/widget/pdf_reader_screen.dart';
 import 'package:flutter/material.dart';
@@ -7,9 +8,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class BookDetailScreen extends ConsumerStatefulWidget{
   final Book book;
+  final Genre genre;
   BookDetailScreen({
     super.key,
-    required this.book
+    required this.book,
+    required this.genre
   });
 
   @override
@@ -40,10 +43,16 @@ with SingleTickerProviderStateMixin{
   @override
   Widget build(BuildContext context) {
 
+
     final chaptersAsync = ref.watch(chaptersByBookProvider(widget.book.bookid));
+    final booksbyGenreAsync =  ref.watch(booksByGenreProvider(widget.book.bookid));
+  
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.book.title),
+        title: Text(widget.book.title,        
+        style: Theme.of(context).textTheme.headlineMedium 
+        ),
+        backgroundColor: Color(widget.book.spinecolor).withAlpha(3),
       ),
       body: Column(
         children: [
@@ -52,8 +61,16 @@ with SingleTickerProviderStateMixin{
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            Container(
+              decoration: BoxDecoration(
+                color: Color(widget.book.spinecolor)
+                ),
+              
+              child: Column(
+              children: [Text(
               widget.book.title,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(
@@ -72,9 +89,12 @@ with SingleTickerProviderStateMixin{
               0.0 :
               (widget.book.lastpageread / widget.book.totalpages).
               clamp(0.0, 1.0),
-              minHeight: 8.0
+              minHeight: 8.0,
+              borderRadius: BorderRadius.circular(12),
+              color: Color(widget.book.spinecolor),
             ),
-
+            ]
+),),
             const SizedBox(
               height: 8.0
             ),
