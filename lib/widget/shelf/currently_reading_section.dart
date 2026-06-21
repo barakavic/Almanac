@@ -1,15 +1,18 @@
 import 'package:bookshelf/data/models/book.dart';
+import 'package:bookshelf/data/models/genre.dart';
+import 'package:bookshelf/widget/book_detail_screen.dart';
 import 'package:bookshelf/widget/book_spine.dart';
-import 'package:bookshelf/widget/pdf_reader_screen.dart';
 import 'package:flutter/material.dart';
 
 class CurrentlyReadingSection extends StatelessWidget {
   final List<Book> books;
   final Function(Book) onLongPressBook;
+  final List<Genre> genres;
 
   const CurrentlyReadingSection({
     required this.books,
     required this.onLongPressBook,
+    required this.genres,
     super.key,
   });
 
@@ -54,9 +57,17 @@ class CurrentlyReadingSection extends StatelessWidget {
                     child: BookSpine(
                     book: book,
                     onTap: () {
+                      final genre = 
+                      genres.where(
+                        (g) => g.genreid == book.genreid).
+                        firstOrNull;
+                      if(genre == null) return;
+
+                      
+
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => PdfReaderScreen(book: book)),
+                        MaterialPageRoute(builder: (_) => BookDetailScreen(book: book, genre: genre)),
                       );
                     },
                   ),)

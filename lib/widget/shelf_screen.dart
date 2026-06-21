@@ -263,19 +263,14 @@ void _showBookActions(Book book){
         actions: [
           IconButton(onPressed: (){
             setState(() {
-              _isGridView = !_isGridView
-              
-              ;
-              
+              _isGridView = !_isGridView;
             });
           }, 
           icon: Icon(_isGridView?
           Icons.view_agenda:
           Icons.grid_view
           ),
-
           ),
-
           IconButton(icon: const Icon(Icons.category), onPressed: (){
             Navigator.push(context, MaterialPageRoute(builder: (context)=> const GenreManagementScreen()));
           },)
@@ -285,17 +280,21 @@ void _showBookActions(Book book){
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error, $err')),
         data: (books) {
-          if (_isGridView){
-            return GridViewScreen(onBookLongPress: _showBookActions);
-          }
           return genreAsync.when(
             loading: () => const Center(child: SpinKitThreeBounce(color: Colors.blue,)),
             error: (err, stack) => Center(child: Text('Error, $err')),
-              data: (genres) {
+            data: (genres) {
+              if (_isGridView) {
+                return GridViewScreen(
+                  onBookLongPress: _showBookActions,
+                  genres: genres,
+                );
+              }
               return ListView(
                 children: [
                   CurrentlyReadingSection(
                     books: books,
+                    genres: genres,
                     onLongPressBook: _showBookActions,
                   ),
                   UnsortedBooksSection(
@@ -348,6 +347,7 @@ void _showBookActions(Book book){
                   else
                   ...genres.map((genre) => GenreBooksSection(
                     genre: genre,
+                    genres: genres,
                     books: books,
                     onLongPressBook: _showBookActions,
                     onDropBook: _handleBookDrop,
@@ -355,8 +355,7 @@ void _showBookActions(Book book){
                 ],
               );
             },
-
-            );
+          );
         },
       ),
       floatingActionButton: FloatingActionButton(

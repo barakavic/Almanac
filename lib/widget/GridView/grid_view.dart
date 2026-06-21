@@ -6,9 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class GridViewScreen extends ConsumerWidget{
+  final List<Genre> genres;
   const GridViewScreen({
     super.key,
     required this.onBookLongPress,
+    required this.genres
     });
 
     final void Function(Book book) onBookLongPress;
@@ -27,7 +29,7 @@ class GridViewScreen extends ConsumerWidget{
         );
       }
       return genreAsync.when(data: (genres){
-        final genresMap = Map.fromEntries(genres.map((g)=> MapEntry(g.genreid, g)));
+        // final genresMap = Map.fromEntries(genres.map((g)=> MapEntry(g.genreid, g)));
         return GridView.builder(
         padding: const EdgeInsets.all(16),
         gridDelegate: 
@@ -43,6 +45,10 @@ class GridViewScreen extends ConsumerWidget{
           return _BookGridCard(
             book: book,
             onTap: () {
+              final genre = genres.where((g) => g.genreid == book.genreid).firstOrNull;
+
+              if (genre == null) return;
+                            
               Navigator.push(context, 
               MaterialPageRoute(builder: (_) => 
               PdfReaderScreen(book: book)));
@@ -91,7 +97,10 @@ class _BookGridCard extends StatelessWidget{
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: genre != null ? Color(genre!.genrecolor) : Color(book.spinecolor),
+          color: genre != null ? 
+          Color(
+            genre!.genrecolor) : 
+            Color(book.spinecolor),
           width: 2
         )
       ),

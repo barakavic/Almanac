@@ -104,7 +104,7 @@ with SingleTickerProviderStateMixin{
               height: 8.0
             ),
             Text(
-              'Page ${widget.book.lastpageread} pf ${widget.book.totalpages}',
+              'Page ${widget.book.lastpageread} of ${widget.book.totalpages}',
               style: Theme.of(context).textTheme.bodySmall,
 
             ),
