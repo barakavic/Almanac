@@ -299,6 +299,7 @@ void _showBookActions(Book book){
                   ),
                   UnsortedBooksSection(
                     books: books,
+                    genres: genres,
                     onLongPressBook: _showBookActions,
                   ),
                   if (genres.isEmpty)
