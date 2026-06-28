@@ -1,9 +1,20 @@
+import 'dart:io';
+
 import 'package:bookshelf/theme/app_theme.dart';
 import 'package:bookshelf/widget/shelf_screen.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
+
+  if(!kIsWeb && (Platform.isLinux || Platform.isWindows)){
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+
+  }
+   
   WidgetsFlutterBinding.ensureInitialized();
 
   PaintingBinding.instance.imageCache.maximumSizeBytes = 200 * 1024 * 1024;
