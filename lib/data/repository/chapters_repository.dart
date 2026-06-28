@@ -11,7 +11,7 @@ class ChapterRepository {
     
     try{
       final db = await _db.database;
-      await db.insert('Chapters', 
+      await db.insert('chapter', 
       chapter.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace
       );
@@ -74,8 +74,9 @@ class ChapterRepository {
       final db =  await _db.database;
       final rows = await db.query(
       'chapter',
-      where: 'chapterid = ?',
+      where: 'bookid = ?',
       whereArgs: [bookid],
+      orderBy: 'chapterorder ASC',
       );
 
     return rows.map((row) => Chapter.fromMap(row)).toList();

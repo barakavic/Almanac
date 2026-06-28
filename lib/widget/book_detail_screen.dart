@@ -45,164 +45,167 @@ with SingleTickerProviderStateMixin{
 
 
     final chaptersAsync = ref.watch(chaptersByBookProvider(widget.book.bookid));
-    final genreColorAsync =  ref.watch(genreColorByBookProvider(widget.book.bookid));
-    final containerColor = genreColorAsync.
-    valueOrNull != null? 
-    Color(genreColorAsync.valueOrNull!) : 
-    Theme.of(context).
-    colorScheme.surfaceContainerHighest;
-  
+    final genreColorAsync = ref.watch(genreColorByBookProvider(widget.book.bookid));
+    final containerColor = genreColorAsync.valueOrNull != null
+        ? Color(genreColorAsync.valueOrNull!)
+        : Theme.of(context).colorScheme.surfaceContainerHighest;
+    final backgroundColor = containerColor.withOpacity(0.10);
+
     return Scaffold(
+      backgroundColor: backgroundColor,
       appBar: AppBar(
-        title: Text(widget.book.title,        
-        style: Theme.of(context).textTheme.headlineMedium 
+        title: Text(
+          widget.book.title,
+          style: Theme.of(context).textTheme.headlineMedium,
         ),
-        backgroundColor: Color(widget.book.spinecolor).withAlpha(3),
+        backgroundColor: containerColor.withOpacity(0.16),
       ),
-      body: Column(
-        children: [
-           Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: Container(
+        decoration: BoxDecoration(color: backgroundColor),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              decoration: BoxDecoration(
-                color: containerColor.withOpacity(0.14)
-                ),
-              
+            Padding(
+              padding: const EdgeInsets.all(16.0),
               child: Column(
-              children: [Text(
-              widget.book.title,
-              overflow: TextOverflow.ellipsis,
-              maxLines: 2,
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(
-              height: 4
-            ),
-            Text(
-              widget.book.author,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(
-              height: 12
-            ),
-
-            LinearProgressIndicator(
-              value: widget.book.totalpages == 0 ?
-              0.0 :
-              (widget.book.lastpageread / widget.book.totalpages).
-              clamp(0.0, 1.0),
-              minHeight: 8.0,
-              borderRadius: BorderRadius.circular(12),
-              color: Color(widget.book.spinecolor),
-            ),
-            ]
-),),
-            const SizedBox(
-              height: 8.0
-            ),
-            Text(
-              'Page ${widget.book.lastpageread} of ${widget.book.totalpages}',
-              style: Theme.of(context).textTheme.bodySmall,
-
-            ),
-
-            const SizedBox(height: 12),
-
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(onPressed: (){
-                Navigator.push(context, 
-                MaterialPageRoute(builder: (_) => PdfReaderScreen(
-                  book: widget.book
-                  ))
-                );
-              }, 
-              child: const Text('Continue Reading'),),
-            ),
-            
-          ],
-          
-
-        ),
-        
-      ),
-
-      TabBar(tabs: const[
-        Tab(text: 'Chapters',),
-        Tab(text: 'Summary',),
-        Tab(text: 'Quiz')
-      ],
-      ),
-      Expanded(
-        child: TabBarView(
-      controller: _tabController,
-      children: [
-        chaptersAsync.when(data: (chapters){
-          if (chapters.isEmpty){
-            return const Center(
-              child: Text(
-                'No Chapters Detected for This Book'
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: containerColor.withOpacity(0.16),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.book.title,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 2,
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          widget.book.author,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 14),
+                        LinearProgressIndicator(
+                          value: widget.book.totalpages == 0
+                              ? 0.0
+                              : (widget.book.lastpageread / widget.book.totalpages)
+                                  .clamp(0.0, 1.0),
+                          minHeight: 8.0,
+                          borderRadius: BorderRadius.circular(12),
+                          color: Color(widget.book.spinecolor),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8.0),
+                  Text(
+                    'Page ${widget.book.lastpageread} of ${widget.book.totalpages}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PdfReaderScreen(book: widget.book),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: containerColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('Continue Reading'),
+                    ),
+                  ),
+                ],
               ),
+            ),
+            TabBar(
+              controller: _tabController,
+              tabs: const [
+                Tab(text: 'Chapters'),
+                Tab(text: 'Summary'),
+                Tab(text: 'Quiz')
+              ],
+              indicatorColor: containerColor,
+              labelColor: containerColor,
+              unselectedLabelColor: Colors.grey,
+            ),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  chaptersAsync.when(
+                    data: (chapters) {
+                      if (chapters.isEmpty) {
+                        return const Center(
+                          child: Text('No Chapters Detected for This Book'),
+                        );
+                      }
 
-
-            );
-
-          }
-
-          return ListView.builder(
-            itemCount: chapters.length,
-            itemBuilder: (context, index){
-              final chapter = chapters[index];
-              return ListTile(
-                title: Text(chapter.title),
-                trailing: Text('pg. ${chapter.chapterstartpagenumber}'),
-                onTap: (){
-                  Navigator.push(context, MaterialPageRoute(
-                    builder: (_) => PdfReaderScreen(
-                      book: widget.book
-                      ),
-                      ),
+                      return ListView.builder(
+                        itemCount: chapters.length,
+                        itemBuilder: (context, index) {
+                          final chapter = chapters[index];
+                          return ListTile(
+                            title: Text(chapter.title),
+                            trailing: Text('pg. ${chapter.chapterstartpagenumber}'),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => PdfReaderScreen(book: widget.book),
+                                ),
+                              );
+                            },
+                          );
+                        },
                       );
-                }
-              );
-
-            }
-            );
-        }, 
-        error: (err, stack) => Center(child: Text('Error Loading Chapters, $err',),), 
-        loading: () => Center(child: CircularProgressIndicator(
-
+                    },
+                    error: (err, stack) => Center(
+                      child: Text('Error Loading Chapters, $err'),
+                    ),
+                    loading: () => const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
+                  const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('AI summaries coming soon'),
+                      ],
+                    ),
+                  ),
+                  const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('Quiz mode coming soon')
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-        ),
-        ),
-        
-        const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text('AI summaries coming soon'),
-            ],
-          ),
-        ),
-
-        const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text('Quiz mode coming soon')
-            ]
-          ),
-        )
-      ],
-      )
-      )
-
-
-        ],
-      )      
+      ),
     );
   }
 }
