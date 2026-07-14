@@ -99,7 +99,7 @@ class DbHelper {
   Future<void> _onUpgrade (Database db, int oldVersion, int newVersion) async{
     if (oldVersion < 2){
       try { await db.execute('''
-      CREATE TABLE chapter(
+      CREATE TABLE chapters(
       chapterid text PRIMARY KEY,
       bookid TEXT,
       title TEXT,
@@ -110,9 +110,36 @@ class DbHelper {
       FOREIGN KEY (bookid) REFERENCES book(bookid) ON DELETE CASCADE
       );
 
-      ''');}
+
+      ''');
+      await db.execute('''
+CREATE TABLE book_index(
+indexid TEXT PRIMARY KEY,
+bookid TEXT,
+pagenumber INTEGER,
+content TEXT,
+FOREIGN KEY(bookid) REFERENCES books(bookid) ON DELETE CASCADE
+);
+
+
+''');
+await db.execute('''
+CREATE VIRTUAL TABLE book_fts USING fts5(
+content,
+book_id UNINDEXED,
+pagenumber UNINDEXED,
+content = "book_index",
+content_row = "rowid"
+);
+'''
+);
+await db.execute('''
+ALTER TABLE books ADD COLUMN isindexed INTEGER DEFAULT 0;
+''');
+
+      }
 catch(e, st){
-  appLogger.e('Failed to create chapter database', error: e, stackTrace: st);
+  appLogger.e('Failed to create database version 2', error: e, stackTrace: st);
   rethrow;
 }
     }
