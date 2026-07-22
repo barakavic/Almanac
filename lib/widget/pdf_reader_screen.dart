@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:bookshelf/data/models/book.dart';
-import 'package:bookshelf/data/models/chapters.dart';
+import 'package:bookshelf/data/models/chapter.dart';
 import 'package:bookshelf/data/providers.dart';
 import 'package:bookshelf/utils/app_logger.dart';
 import 'package:bookshelf/widget/PdfReaderComponent/quote_card.dart';

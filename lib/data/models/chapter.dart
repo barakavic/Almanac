@@ -16,41 +16,37 @@ class Chapter {
     this.chapterswatchcolor,
     required this.chapterstartpagenumber,
     required this.chapterendpagenumber,
-    required this.chapterorder
+    required this.chapterorder,
   });
 
-  Map<String, dynamic> toMap(){
-    return{
+  int get pagenumber => chapterstartpagenumber;
+
+  Map<String, dynamic> toMap() {
+    return {
       'chapterid': chapterid,
       'bookid': bookid,
       'title': title,
       'chapterswatchcolor': chapterswatchcolor,
       'chapterstartpagenumber': chapterstartpagenumber,
       'chapterendpagenumber': chapterendpagenumber,
-      'chapterorder': chapterorder
+      'chapterorder': chapterorder,
     };
-
   }
 
-  factory Chapter.fromMap(Map<String, dynamic> map){
-    try{
+  factory Chapter.fromMap(Map<String, dynamic> map) {
+    try {
       return Chapter(
-        chapterid: map['chapterid'] ?? '', 
-        bookid: map['bookid'] ?? '', 
-        title: map['title'] ?? '', 
+        chapterid: map['chapterid'] ?? '',
+        bookid: map['bookid'] ?? '',
+        title: map['title'] ?? '',
         chapterswatchcolor: map['chapterswatchcolor'],
-        chapterstartpagenumber: map['chapterstartpagenumber'] ?? 0, 
-        chapterendpagenumber: map['chapterendpagenumber'] ?? 0, 
-        chapterorder: map['chapterorder'] ?? 0);
-      
-
-    }
-    catch(e, st){
-      appLogger.e('Failed to parse chapter', error: e, stackTrace: st);
+        chapterstartpagenumber: map['chapterstartpagenumber'] ?? 0,
+        chapterendpagenumber: map['chapterendpagenumber'] ?? 0,
+        chapterorder: map['chapterorder'] ?? 0,
+      );
+    } catch (e, st) {
+      appLogger.e('Failed to parse Chapter. Map $map', error: e, stackTrace: st);
       rethrow;
-
     }
-
   }
-
 }

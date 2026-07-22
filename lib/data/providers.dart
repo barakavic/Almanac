@@ -1,10 +1,10 @@
 import 'package:bookshelf/data/database/db_helper.dart';
 import 'package:bookshelf/data/models/book.dart';
-import 'package:bookshelf/data/models/chapters.dart';
+import 'package:bookshelf/data/models/chapter.dart';
 import 'package:bookshelf/data/models/genre.dart';
 import 'package:bookshelf/data/models/subgenre.dart';
 import 'package:bookshelf/data/repository/book_repository.dart';
-import 'package:bookshelf/data/repository/chapters_repository.dart';
+import 'package:bookshelf/data/repository/chapter_repository.dart';
 import 'package:bookshelf/data/repository/genre_repository.dart';
 import 'package:bookshelf/data/repository/subgenre_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -48,19 +48,12 @@ Provider<ChapterRepository>(
     )
 );
 
-final chaptersProvider = 
-FutureProvider<List<Chapter>>(
-  (ref) => ref.watch(
-    chaptersRepositoryProvider).
-    getAllChapters()
-  );
-
 final chaptersByBookProvider = 
   FutureProvider.family<List<Chapter>, String>(
     (ref, bookid){
       return ref.watch(
         chaptersRepositoryProvider
-        ).getChaptersByBook(bookid);
+        ).getChaptersForBook(bookid);
     }
   );
 

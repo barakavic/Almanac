@@ -98,50 +98,130 @@ class DbHelper {
   }
   Future<void> _onUpgrade (Database db, int oldVersion, int newVersion) async{
     if (oldVersion < 2){
-      try { await db.execute('''
-      CREATE TABLE chapters(
-      chapterid text PRIMARY KEY,
-      bookid TEXT,
-      title TEXT,
-      chapterswatchcolor INTEGER,
-      chapterstartpagenumber INTEGER,
-      chapterendpagenumber INTEGER,
-      chapterorder INTEGER,
-      FOREIGN KEY (bookid) REFERENCES book(bookid) ON DELETE CASCADE
-      );
+      try {
+        await db.execute('''
+        CREATE TABLE chapters(
+        chapterid TEXT PRIMARY KEY,
+        bookid TEXT,
+        title TEXT,
+        chapterswatchcolor INTEGER,
+        chapterstartpagenumber INTEGER,
+        chapterendpagenumber INTEGER,
+        chapterorder INTEGER,
+        FOREIGN KEY (bookid) REFERENCES books(bookid) ON DELETE CASCADE
+        );
+        ''');
 
+        await db.execute('''
+        CREATE TABLE bookindex(
+        indexid TEXT PRIMARY KEY,
+        bookid TEXT,
+        pagenumber INTEGER,
+        content TEXT,
+        FOREIGN KEY(bookid) REFERENCES books(bookid) ON DELETE CASCADE
+        );
+        ''');
 
-      ''');
-      await db.execute('''
-CREATE TABLE book_index(
-indexid TEXT PRIMARY KEY,
-bookid TEXT,
-pagenumber INTEGER,
-content TEXT,
-FOREIGN KEY(bookid) REFERENCES books(bookid) ON DELETE CASCADE
-);
+        await db.execute('''
+        CREATE VIRTUAL TABLE book_fts USING fts5(
+        content,
+        bookid UNINDEXED,
+        pagenumber UNINDEXED,
+        content = "bookindex",
+        content_row = "rowid"
+        );
+        ''');
 
+        await db.execute('''
+        CREATE TABLE devices(
+        deviceid TEXT PRIMARY KEY,
+        devicename TEXT,
+        platform TEXT,
+        macaddress TEXT UNIQUE,
+        mdnshostname TEXT,
+        port INTEGER DEFAULT 8765, 
+        createdat TEXT,
+        lastseenat TEXT
+        );
+        ''');
 
-''');
-await db.execute('''
-CREATE VIRTUAL TABLE book_fts USING fts5(
-content,
-book_id UNINDEXED,
-pagenumber UNINDEXED,
-content = "book_index",
-content_row = "rowid"
-);
-'''
-);
-await db.execute('''
-ALTER TABLE books ADD COLUMN isindexed INTEGER DEFAULT 0;
-''');
+        await db.execute('''
+        CREATE TABLE watched_folders(
+        folderid TEXT PRIMARY KEY,
+        deviceid TEXT NOT NULL,
+        displayname TEXT,
+        absolutepath TEXT,
+        relativepath TEXT,
+        volumeserial TEXT,
+        isremovable INTEGER,
+        isavailable INTEGER,
+        autoimport INTEGER,
+        recursive INTEGER,
+        scanstatus INTEGER,
+        lastscannedat TEXT,
+        lastseenat TEXT,
+        addedat TEXT,
+        FOREIGN KEY (deviceid) REFERENCES devices(deviceid) ON DELETE CASCADE
+        );
+        ''');
 
+        await db.execute('''
+        CREATE TABLE pendingtransfers(
+        transferid TEXT PRIMARY KEY,
+        bookid TEXT,
+        sourcedeviceid TEXT,
+        targetdeviceid TEXT,
+        relaydeviceid TEXT,
+        filechecksum TEXT,
+        filesizebytes INTEGER,
+        transfertype INTEGER,
+        currenthop INTEGER,
+        priority INTEGER,
+        status INTEGER,
+        retrycount INTEGER,
+        temppath TEXT,
+        relayrecievedat TEXT,
+        relayexpiresat TEXT,
+        lastattemptedat TEXT,
+        createdat TEXT,
+        FOREIGN KEY (bookid) REFERENCES books(bookid) ON DELETE CASCADE,
+        FOREIGN KEY (sourcedeviceid) REFERENCES devices(deviceid) ON DELETE CASCADE,
+        FOREIGN KEY (targetdeviceid) REFERENCES devices(deviceid) ON DELETE CASCADE,
+        FOREIGN KEY (relaydeviceid) REFERENCES devices(deviceid) ON DELETE SET NULL
+        );
+        ''');
+
+        await db.execute('''
+        CREATE TABLE event_log(
+        eventid TEXT PRIMARY KEY,
+        eventtype INTEGER,
+        severity INTEGER,
+        deviceid TEXT,
+        bookid TEXT,
+        transferid TEXT,
+        message TEXT,
+        metadatajson TEXT,
+        createdat TEXT,
+        FOREIGN KEY (deviceid) REFERENCES devices(deviceid) ON DELETE SET NULL,
+        FOREIGN KEY (bookid) REFERENCES books(bookid) ON DELETE SET NULL,
+        FOREIGN KEY (transferid) REFERENCES pendingtransfers(transferid) ON DELETE SET NULL
+        );
+        ''');
+
+        await db.execute('ALTER TABLE books ADD COLUMN isindexed INTEGER DEFAULT 0;');
+        await db.execute('ALTER TABLE books ADD COLUMN isremote INTEGER DEFAULT 0;');
+        await db.execute('ALTER TABLE books ADD COLUMN remotedeviceid TEXT;');
+        await db.execute('ALTER TABLE books ADD COLUMN deviceid TEXT;');
+        await db.execute('ALTER TABLE books ADD COLUMN lastopenedat TEXT;');
+
+        await db.execute('ALTER TABLE wishlist ADD COLUMN deviceid TEXT;');
+        await db.execute('ALTER TABLE wishlist ADD COLUMN thumbnailpath TEXT;');
+        await db.execute('ALTER TABLE wishlist ADD COLUMN metadatafetched INTEGER DEFAULT 0;');
       }
-catch(e, st){
-  appLogger.e('Failed to create database version 2', error: e, stackTrace: st);
-  rethrow;
-}
+      catch(e, st){
+        appLogger.e('Failed to create database version 2', error: e, stackTrace: st);
+        rethrow;
+      }
     }
   }
 }
