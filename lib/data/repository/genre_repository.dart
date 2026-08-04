@@ -46,6 +46,15 @@ class GenreRepository {
     );
   }
 
+  Future<void> updateGenreColor(String genreid, int colorValue) async {
+    final db = await _db.database;
+    await db.update('genre',
+    {'genreColor': colorValue},
+    where: 'genreid = ?',
+    whereArgs: [genreid]
+    );
+  }
+
   Future<void> deleteGenre(String genreid) async {
     final db = await _db.database;
     final rowsDeleted = await db.delete(

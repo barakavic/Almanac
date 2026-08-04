@@ -123,7 +123,7 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> with WidgetsB
           final totalpages = details.document.pages.count;
 
           if (widget.book.totalpages == 0) {
-            ref.read(bookRepositoryProvider).updateBookTotalPages(widget.book.bookid, totalpages);
+            await ref.read(bookRepositoryProvider).updateBookTotalPages(widget.book.bookid, totalpages);
           }
 
           final existingChapters = await ref.read(

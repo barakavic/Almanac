@@ -11,14 +11,15 @@ class Genre {
 
 
   });
-Map<String, dynamic> toMap() => {
-  'genreid': genreid,
-  'name': name,
-  'genrecolor': genrecolor,
-};
-factory Genre.fromMap(Map<String, dynamic> map) => Genre( 
-genreid: map['genreid'] ?? '', 
-name: map['name'] ?? '', 
-genrecolor: map['genrecolor'] ?? 0
-);
+  Map<String, dynamic> toMap() => {
+    'genreid': genreid,
+    'name': name,
+    'genreColor': genrecolor,
+  };
+
+  factory Genre.fromMap(Map<String, dynamic> map) => Genre( 
+    genreid: map['genreid'] ?? '', 
+    name: map['name'] ?? '', 
+    genrecolor: map['genreColor'] ?? map['genrecolor'] ?? 0
+  );
 }
