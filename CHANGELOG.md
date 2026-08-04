@@ -5,9 +5,13 @@
 - Drag and drop book reassignment between genres
 - Genre picker on book import
 - Reader settings sheet (Scroll mode, directional, scroll head, dark mode)
-- Quote sharing from pdf text selection
+- Quote sharing from PDF text selection
+- **View persistence** — Grid/Shelf toggle survives app restarts via `shared_preferences`; loaded before first frame, no flicker
+- **Chapter extraction** — on first PDF open, bookmark tree parsed into chapter records with correct start/end pages (two-pass); fails silently if no bookmarks present
 
-### Fixed 
-- Duplicate book entries on shared/reopened files 
+### Fixed
+- Duplicate book entries on shared/reopened files
 - White GenreDivider rendering bug
-- Debounced DB writes on page change 
+- Debounced DB writes on page change
+- `PdfDestination.pageIndex` undefined getter — replaced with correct `document.pages.indexOf(dest.page)` lookup
+- `rethrow` in chapter extraction catch block replaced with silent log

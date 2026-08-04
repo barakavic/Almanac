@@ -32,7 +32,6 @@ class ShelfScreen extends ConsumerStatefulWidget {
 }
 class _ShelfScreenState extends ConsumerState<ShelfScreen>{
     final Set<String> _processingPaths = {};
-    bool _isGridView = false;
 
     late AppLinks _appLinks;
     StreamSubscription<Uri>? _linkSubScription;
@@ -254,6 +253,7 @@ void _showBookActions(Book book){
   Widget build(BuildContext context) {
     final bookAsync = ref.watch(booksProvider);
     final genreAsync = ref.watch(genreProvider);
+    final isGridView = ref.watch(viewModeProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -262,11 +262,9 @@ void _showBookActions(Book book){
         ),
         actions: [
           IconButton(onPressed: (){
-            setState(() {
-              _isGridView = !_isGridView;
-            });
+            ref.read(viewModeProvider.notifier).toggleView();
           }, 
-          icon: Icon(_isGridView?
+          icon: Icon(isGridView?
           Icons.view_agenda:
           Icons.grid_view
           ),
@@ -284,7 +282,7 @@ void _showBookActions(Book book){
             loading: () => const Center(child: SpinKitThreeBounce(color: Colors.blue,)),
             error: (err, stack) => Center(child: Text('Error, $err')),
             data: (genres) {
-              if (_isGridView) {
+              if (isGridView) {
                 return GridViewScreen(
                   onBookLongPress: _showBookActions,
                   genres: genres,

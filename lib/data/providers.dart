@@ -8,6 +8,29 @@ import 'package:bookshelf/data/repository/chapter_repository.dart';
 import 'package:bookshelf/data/repository/genre_repository.dart';
 import 'package:bookshelf/data/repository/subgenre_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
+  throw UnimplementedError();
+});
+
+class ViewModeNotifier extends Notifier<bool> {
+  @override
+  bool build() {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    return prefs.getBool('is_grid_view') ?? false;
+  }
+
+  void toggleView() {
+    state = !state;
+    final prefs = ref.read(sharedPreferencesProvider);
+    prefs.setBool('is_grid_view', state);
+  }
+}
+
+final viewModeProvider = NotifierProvider<ViewModeNotifier, bool>(() {
+  return ViewModeNotifier();
+});
 
 final dbHelperProvider = Provider<DbHelper>((ref)=> DbHelper());
 final bookRepositoryProvider = Provider<BookRepository>(

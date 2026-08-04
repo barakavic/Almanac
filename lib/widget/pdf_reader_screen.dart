@@ -122,54 +122,67 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> with WidgetsB
         onDocumentLoaded: (PdfDocumentLoadedDetails details) async {
           final totalpages = details.document.pages.count;
 
-          if (widget.book.totalpages == 0){
+          if (widget.book.totalpages == 0) {
             ref.read(bookRepositoryProvider).updateBookTotalPages(widget.book.bookid, totalpages);
           }
 
           final existingChapters = await ref.read(
-            chaptersByBookProvider(widget.book.bookid).future
+            chaptersByBookProvider(widget.book.bookid).future,
           );
 
-          if (existingChapters.isEmpty){
-            try{
+          if (existingChapters.isEmpty) {
+            try {
               final chapterRepository = ref.read(chaptersRepositoryProvider);
+              final bookmarks = details.document.bookmarks;
 
-              int chapterOrder = 0;
+              if (bookmarks.count == 0) return;
 
-              final bookmarkList = details.document.bookmarks as List?;
+              // Pass 1: build chapter list with start pages only
+              final chapters = <Chapter>[];
+              for (int i = 0; i < bookmarks.count; i++) {
+                final bookmark = bookmarks[i];
+                final dest = bookmark.destination;
+                final startPage = dest != null
+                    ? details.document.pages.indexOf(dest.page) + 1
+                    : 1;
+                chapters.add(Chapter(
+                  chapterid: const Uuid().v4(),
+                  bookid: widget.book.bookid,
+                  title: bookmark.title,
+                  chapterstartpagenumber: startPage,
+                  chapterendpagenumber: 0,
+                  chapterorder: i + 1,
+                ));
+              }
 
-              if (bookmarkList != null && bookmarkList.isNotEmpty){
-                for (final bookmark in bookmarkList){
-                  chapterOrder ++;
+              // Pass 2: fill end pages
+              final filled = <Chapter>[];
+              for (int i = 0; i < chapters.length; i++) {
+                final isLast = i == chapters.length - 1;
+                filled.add(Chapter(
+                  chapterid: chapters[i].chapterid,
+                  bookid: chapters[i].bookid,
+                  title: chapters[i].title,
+                  chapterstartpagenumber: chapters[i].chapterstartpagenumber,
+                  chapterendpagenumber: isLast
+                      ? totalpages
+                      : chapters[i + 1].chapterstartpagenumber - 1,
+                  chapterorder: chapters[i].chapterorder,
+                ));
+              }
 
-                  final chapter = Chapter(
-                    chapterid: Uuid().v4(), 
-                    bookid: widget.book.bookid, 
-                    title: bookmark.title, 
-                    chapterstartpagenumber: bookmark.pageIndex +1, 
-                    chapterendpagenumber: 0, 
-                    chapterorder: chapterOrder
-                    );
-                  await chapterRepository.addChapter(chapter) ;
-
-                }
+              for (final chapter in filled) {
+                await chapterRepository.addChapter(chapter);
               }
 
               ref.invalidate(chaptersByBookProvider(widget.book.bookid));
-
-
-            }
-
-            catch(e, st){
+            } catch (e, st) {
               appLogger.e('Failed to extract chapters from bookmarks',
-              error: e,
-               stackTrace: st
-              );
-              rethrow;
+                  error: e, stackTrace: st);
+              // chapters are a nice-to-have — fail silently
             }
           }
-          
-          }
+        }
           
       
 
