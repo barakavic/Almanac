@@ -89,6 +89,10 @@ class DbHelper {
   name TEXT,
   createdat TEXT
   );''');
+
+      if (version >= 2) {
+        await _onUpgrade(db, 1, version);
+      }
     }
     catch(e, st){
       appLogger.e('Failed to create database', error: e, stackTrace: st);
@@ -123,12 +127,13 @@ class DbHelper {
         ''');
 
         await db.execute('''
-        CREATE VIRTUAL TABLE book_fts USING fts5(
+        CREATE VIRTUAL TABLE book_fts USING fts4(
         content,
-        bookid UNINDEXED,
-        pagenumber UNINDEXED,
-        content = "bookindex",
-        content_row = "rowid"
+        bookid,
+        pagenumber,
+        notindexed=bookid,
+        notindexed=pagenumber,
+        content="bookindex"
         );
         ''');
 
