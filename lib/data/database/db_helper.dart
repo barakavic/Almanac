@@ -14,7 +14,7 @@ class DbHelper {
     try{
     final dir= await getApplicationDocumentsDirectory();
     final path= join(dir.path, 'bookshelf.db');
-    return openDatabase(path, version: 2, onCreate: _onCreate, onUpgrade: _onUpgrade);
+    return openDatabase(path, version: 3, onCreate: _onCreate, onUpgrade: _onUpgrade);
     }
     catch(e, st){
       appLogger.e('Failed to open database', error: e, stackTrace: st);
@@ -223,8 +223,37 @@ class DbHelper {
         await db.execute('ALTER TABLE wishlist ADD COLUMN thumbnailpath TEXT;');
         await db.execute('ALTER TABLE wishlist ADD COLUMN metadatafetched INTEGER DEFAULT 0;');
       }
-      catch(e, st){
+       
+      catch (e, st) {
         appLogger.e('Failed to create database version 2', error: e, stackTrace: st);
+        rethrow;
+      }
+    }
+    if (oldVersion < 3) {
+      try {
+        await db.execute('''
+        CREATE TABLE paired_devices(
+        pairingid TEXT PRIMARY KEY,
+        localdeviceid TEXT NOT NULL,
+        remotedeviceid TEXT NOT NULL,
+        remoteip TEXT,
+        remoteport INTEGER DEFAULT 8585,
+        pairedat TEXT,
+        publickey TEXT,
+        FOREIGN KEY (localdeviceid) REFERENCES devices(deviceid) ON DELETE CASCADE,
+        FOREIGN KEY (remotedeviceid) REFERENCES devices(deviceid) ON DELETE CASCADE
+        );
+        ''');
+
+        await db.execute('ALTER TABLE books ADD COLUMN volumeserial TEXT;');
+        await db.execute('ALTER TABLE books ADD COLUMN relativepath TEXT;');
+        await db.execute('ALTER TABLE books ADD COLUMN sha256 TEXT;');
+
+        await db.execute('ALTER TABLE devices ADD COLUMN ipaddress TEXT;');
+        await db.execute('ALTER TABLE devices ADD COLUMN pairingcode TEXT;');
+        await db.execute('ALTER TABLE devices ADD COLUMN pairingcodeexpiresat TEXT;');
+      } catch (e, st) {
+        appLogger.e('Failed to create database version 3', error: e, stackTrace: st);
         rethrow;
       }
     }
