@@ -54,6 +54,12 @@ dependencies:
   uri_to_file: ^1.0.0
   share_handler: ^0.0.25
   shared_preferences: ^2.2.3
+  shelf: ^1.4.1
+  shelf_router: ^1.1.4
+  multicast_dns: ^0.3.2
+  nsd: ^4.0.0
+  mobile_scanner: ^5.0.0
+  wifi_iot: ^0.3.19
 
 dev_dependencies:
   flutter_test:
