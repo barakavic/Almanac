@@ -60,6 +60,7 @@ dependencies:
   nsd: ^4.0.0
   mobile_scanner: ^5.0.0
   wifi_iot: ^0.3.19
+  disk_space: ^0.2.1
 
 dev_dependencies:
   flutter_test:
@@ -130,6 +131,3 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
-
-
-

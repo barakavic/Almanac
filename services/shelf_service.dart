@@ -3,38 +3,57 @@ import 'dart:io';
 
 import 'package:bookshelf/data/repository/book_repository.dart';
 import 'package:bookshelf/utils/app_logger.dart';
-import 'package:http/http.dart' as http;
+import 'package:disk_space/disk_space.dart';
 import 'package:shelf/shelf.dart' as shelf;
 import 'package:shelf_router/shelf_router.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 
 class AlmanacServer{
+
+  
   HttpServer? _httpserver;
   final Router _router = Router();
   final BookRepository _bookrepository;
+  String _pairingToken = '';
 
+    void setPairingToken(String token){
+    _pairingToken = token;
+  }
+
+  shelf.Handler get _handler => shelf.Pipeline()
+  .addMiddleware(_authMiddleware())
+  .addHandler(_router.call);
+
+  shelf.Middleware _authMiddleware(){
+    return (shelf.Handler innerHandler){
+      return (shelf.Request request) async{
+        if (request.url.path == 'pair'){
+          return innerHandler(request);
+        }
+
+        final token = request.headers['x-almanac-token'];
+        if (token == null || token != _pairingToken){
+          return shelf.Response.forbidden(
+            jsonEncode(
+              {'error': 'Unauthorized Device'}
+            ),
+            headers: {'Content-Type': 'application/json'},
+          );
+        }
+
+        return innerHandler(request);
+      };
+    };
+  }
+
+ 
+    
    Future<void> start() async{
-    String ipAddress = '0.0.0.0';
-    try{
-      final interfaces = await NetworkInterface.list(
-        type: InternetAddressType.IPv4,
-        includeLoopback: false
-      );
-      if (interfaces.isNotEmpty){
-        ipAddress = interfaces.first.addresses.first.address;
-      }
-    }
-    catch(e, st){
-      appLogger.e("Failed to get LAN IP", error: e, stackTrace: st);
-    }
-
-    _router.get('/ping', _pinghandler);
-    _router.get('/books', _bookshandler);
-
-    _httpserver = await shelf_io.serve(_router.call, 
-    ipAddress, 8675
+    final ipAddress = await _getLanIp();
+    _httpserver = await shelf_io.serve(_handler, 
+    ipAddress, 8765
     );
-    appLogger.i('Almanac Server is running on http://$ipAddress:8675');
+    appLogger.i('Almanac Server is running on http://$ipAddress:8765');
 
 
   }
@@ -42,13 +61,17 @@ class AlmanacServer{
   AlmanacServer(
     this._bookrepository
 
-  );
+  ){
+    _router.get('/ping', _pinghandler);
+    _router.get('/books', _bookshandler);
+  }
 
   Future<shelf.Response> _pinghandler(shelf.Request request) async{
+    final diskSpace = await DiskSpace.getFreeDiskSpace;
     final payload = {
       'device_name': Platform.localHostname,
       'platform' : Platform.operatingSystem,
-      'available_storage_bytes' : 5000000000 // Hardcoded 50GB
+      'available_storage_bytes' : diskSpace ?? 0
     };
     return shelf.Response.ok(
       jsonEncode(payload),
@@ -87,5 +110,23 @@ class AlmanacServer{
   }
 
   
+  Future<String> _getLanIp() async{
+  final interfaces = await NetworkInterface.list(
+    type: InternetAddressType.IPv4
+  );
+  for (final interface in interfaces){
+    for (final address in interface.addresses){
+      if (!address.isLoopback) return address.address;
+
+    }
+   
+  }
+   return '0.0.0.0';
+}
+  
+
+
+
   
 }
+
