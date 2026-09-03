@@ -1,12 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:bookshelf/data/models/device.dart';
 import 'package:bookshelf/data/repository/book_repository.dart';
+import 'package:bookshelf/data/repository/device_repository.dart';
 import 'package:bookshelf/utils/app_logger.dart';
-import 'package:disk_space/disk_space.dart';
+import 'package:disk_space_plus/disk_space_plus.dart';
 import 'package:shelf/shelf.dart' as shelf;
 import 'package:shelf_router/shelf_router.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
+import 'package:uuid/uuid.dart';
 
 class AlmanacServer{
 
@@ -15,6 +18,8 @@ class AlmanacServer{
   final Router _router = Router();
   final BookRepository _bookrepository;
   String _pairingToken = '';
+  final DeviceRepository _deviceRepository;
+  final String localDeviceUuid;
 
     void setPairingToken(String token){
     _pairingToken = token;
@@ -59,15 +64,18 @@ class AlmanacServer{
   }
 
   AlmanacServer(
-    this._bookrepository
+    this._bookrepository,
+    this._deviceRepository,
+    this.localDeviceUuid
 
   ){
     _router.get('/ping', _pinghandler);
     _router.get('/books', _bookshandler);
+    _router.post('/pair', _pairhandler);
   }
 
   Future<shelf.Response> _pinghandler(shelf.Request request) async{
-    final diskSpace = await DiskSpace.getFreeDiskSpace;
+    final diskSpace = await DiskSpacePlus().getFreeDiskSpace;
     final payload = {
       'device_name': Platform.localHostname,
       'platform' : Platform.operatingSystem,
@@ -101,6 +109,42 @@ class AlmanacServer{
     }
   }
 
+
+Future<shelf.Response> _pairhandler( shelf.Request request) async {
+    
+
+  try {
+    final payloadString = await request.readAsString();
+    final payload = await jsonDecode(payloadString) as Map<String, dynamic>;
+
+    final incomingDevice = Device.fromMap(payload);
+
+    await _deviceRepository.addDevice(incomingDevice);
+    appLogger.i('Paired Successfully with ${incomingDevice.devicename}');
+
+    final myDevice = Device(
+    deviceid:  const Uuid().v4(), 
+    devicename: Platform.localHostname,
+    platform: Platform.operatingSystem,
+    macaddress: localDeviceUuid, //localDeviceUuid is initialized in the main.dart
+    port: 8765, 
+    createdat: DateTime.now().toIso8601String(), 
+    lastseenat: DateTime.now().toIso8601String()
+    );
+    return shelf.Response.ok(
+      jsonEncode(myDevice.toMap()),
+      headers: {'Content-Type': 'application/json'},
+    );
+  } catch (e, st) {
+    appLogger.e('failed to create process pairing request', error: e, stackTrace: st);
+    return shelf.Response.internalServerError(
+      body: jsonEncode(
+        {'error': 'Failed to process pairing request'}
+      ),
+      headers: {'Content-Type': 'application/json'},
+      );
+    }
+}
   bool get isRunning => _httpserver != null;
 
   Future<void> stop() async {

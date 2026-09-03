@@ -22,6 +22,7 @@ import 'package:bookshelf/data/models/book.dart';
 import 'package:share_handler/share_handler.dart';
 import 'package:uri_to_file/uri_to_file.dart';
 import 'package:uuid/uuid.dart';
+import 'package:bookshelf/ui/devices/devices_screen.dart';
 
 class ShelfScreen extends ConsumerStatefulWidget {
   const ShelfScreen({super.key});
@@ -40,6 +41,14 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
     @override
     void initState(){
       super.initState();
+
+      Future.microtask(()async{
+        final server = await ref.read(almanacServerProvider.future);
+        if(!server.isRunning){
+          await server.start();
+          
+        }
+      });
       // ColdStart
       WidgetsBinding.instance.addPostFrameCallback(
         (_){
@@ -268,6 +277,16 @@ void _showBookActions(Book book){
           Icons.view_agenda:
           Icons.grid_view
           ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.phonelink),
+            tooltip: 'Paired Devices',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const DevicesScreen()),
+              );
+            },
           ),
           IconButton(icon: const Icon(Icons.category), onPressed: (){
             Navigator.push(context, MaterialPageRoute(builder: (context)=> const GenreManagementScreen()));

@@ -23,7 +23,7 @@ class DbHelper {
 }
   Future<void> _onCreate(Database db, int version) async{
     try{
-    await db.execute("""CREATE TABLE books( 
+    await db.execute("""CREATE TABLE IF NOT EXISTS books( 
     bookid TEXT PRIMARY KEY, 
     title TEXT, 
     author TEXT, 
@@ -41,21 +41,21 @@ class DbHelper {
     FOREIGN KEY(subgenreid) REFERENCES subgenre(subgenreid) ON DELETE SET NULL);"""
 );
 
-    await db.execute(""" CREATE TABLE genre( 
+    await db.execute(""" CREATE TABLE IF NOT EXISTS genre( 
     genreid TEXT PRIMARY KEY, 
     name TEXT, 
     genreColor INTEGER
     );
      """);
 
-    await db.execute(""" CREATE TABLE subgenre( 
+    await db.execute(""" CREATE TABLE IF NOT EXISTS subgenre( 
     subgenreid TEXT PRIMARY KEY, 
     subgenrename TEXT, 
     genreid TEXT, 
     FOREIGN KEY (genreid) REFERENCES genre(genreid) ON DELETE SET NULL );
     """);
 
-    await db.execute(""" CREATE TABLE annotations(
+    await db.execute(""" CREATE TABLE IF NOT EXISTS annotations(
     annotationid TEXT PRIMARY KEY, 
     bookid TEXT, 
     pagenumber INTEGER, 
@@ -66,7 +66,7 @@ class DbHelper {
     FOREIGN KEY(bookid) references books(bookid) ON DELETE CASCADE);
     """);
 
-    await db.execute('''CREATE TABLE summaries(
+    await db.execute('''CREATE TABLE IF NOT EXISTS summaries(
   summaryid TEXT PRIMARY KEY,
   bookid TEXT,
   frompage INTEGER,
@@ -77,14 +77,14 @@ class DbHelper {
   FOREIGN KEY(bookid) REFERENCES books(bookid) ON DELETE CASCADE
   );''');
 
-    await db.execute('''CREATE TABLE wishlist(
+    await db.execute('''CREATE TABLE IF NOT EXISTS wishlist(
   wishlistid TEXT PRIMARY KEY,
   coverpath TEXT,
   title TEXT,
   addedat TEXT
   );''');
 
-  await db.execute('''CREATE TABLE users(
+  await db.execute('''CREATE TABLE IF NOT EXISTS users(
   userid TEXT PRIMARY KEY,
   name TEXT,
   createdat TEXT
@@ -104,7 +104,7 @@ class DbHelper {
     if (oldVersion < 2){
       try {
         await db.execute('''
-        CREATE TABLE chapters(
+        CREATE TABLE IF NOT EXISTS chapters(
         chapterid TEXT PRIMARY KEY,
         bookid TEXT,
         title TEXT,
@@ -117,7 +117,7 @@ class DbHelper {
         ''');
 
         await db.execute('''
-        CREATE TABLE bookindex(
+        CREATE TABLE IF NOT EXISTS bookindex(
         indexid TEXT PRIMARY KEY,
         bookid TEXT,
         pagenumber INTEGER,
@@ -138,7 +138,7 @@ class DbHelper {
         ''');
 
         await db.execute('''
-        CREATE TABLE devices(
+        CREATE TABLE IF NOT EXISTS devices(
         deviceid TEXT PRIMARY KEY,
         devicename TEXT,
         platform TEXT,
@@ -151,7 +151,7 @@ class DbHelper {
         ''');
 
         await db.execute('''
-        CREATE TABLE watched_folders(
+        CREATE TABLE IF NOT EXISTS watched_folders(
         folderid TEXT PRIMARY KEY,
         deviceid TEXT NOT NULL,
         displayname TEXT,
@@ -171,7 +171,7 @@ class DbHelper {
         ''');
 
         await db.execute('''
-        CREATE TABLE pendingtransfers(
+        CREATE TABLE IF NOT EXISTS pendingtransfers(
         transferid TEXT PRIMARY KEY,
         bookid TEXT,
         sourcedeviceid TEXT,
@@ -197,7 +197,7 @@ class DbHelper {
         ''');
 
         await db.execute('''
-        CREATE TABLE event_log(
+        CREATE TABLE IF NOT EXISTS event_log(
         eventid TEXT PRIMARY KEY,
         eventtype INTEGER,
         severity INTEGER,
@@ -232,7 +232,20 @@ class DbHelper {
     if (oldVersion < 3) {
       try {
         await db.execute('''
-        CREATE TABLE paired_devices(
+        CREATE TABLE IF NOT EXISTS devices(
+        deviceid TEXT PRIMARY KEY,
+        devicename TEXT,
+        platform TEXT,
+        macaddress TEXT UNIQUE,
+        mdnshostname TEXT,
+        port INTEGER DEFAULT 8765, 
+        createdat TEXT,
+        lastseenat TEXT
+        );
+        ''');
+
+        await db.execute('''
+        CREATE TABLE IF NOT EXISTS paireddevices(
         pairingid TEXT PRIMARY KEY,
         localdeviceid TEXT NOT NULL,
         remotedeviceid TEXT NOT NULL,
@@ -245,13 +258,18 @@ class DbHelper {
         );
         ''');
 
-        await db.execute('ALTER TABLE books ADD COLUMN volumeserial TEXT;');
-        await db.execute('ALTER TABLE books ADD COLUMN relativepath TEXT;');
-        await db.execute('ALTER TABLE books ADD COLUMN sha256 TEXT;');
-
-        await db.execute('ALTER TABLE devices ADD COLUMN ipaddress TEXT;');
-        await db.execute('ALTER TABLE devices ADD COLUMN pairingcode TEXT;');
-        await db.execute('ALTER TABLE devices ADD COLUMN pairingcodeexpiresat TEXT;');
+        for (final sql in [
+          'ALTER TABLE books ADD COLUMN volumeserial TEXT;',
+          'ALTER TABLE books ADD COLUMN relativepath TEXT;',
+          'ALTER TABLE books ADD COLUMN sha256 TEXT;',
+          'ALTER TABLE devices ADD COLUMN ipaddress TEXT;',
+          'ALTER TABLE devices ADD COLUMN pairingcode TEXT;',
+          'ALTER TABLE devices ADD COLUMN pairingcodeexpiresat TEXT;',
+        ]) {
+          try {
+            await db.execute(sql);
+          } catch (_) {}
+        }
       } catch (e, st) {
         appLogger.e('Failed to create database version 3', error: e, stackTrace: st);
         rethrow;

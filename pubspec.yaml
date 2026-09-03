@@ -58,9 +58,11 @@ dependencies:
   shelf_router: ^1.1.4
   multicast_dns: ^0.3.2
   nsd: ^4.0.0
-  mobile_scanner: ^5.0.0
+  mobile_scanner: ^7.4.0
   wifi_iot: ^0.3.19
-  disk_space: ^0.2.1
+  disk_space_plus: ^0.2.2
+  qr_flutter: ^4.1.0
+  crypto: ^3.0.7
 
 dev_dependencies:
   flutter_test:
