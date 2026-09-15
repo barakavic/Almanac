@@ -23,6 +23,7 @@ import 'package:share_handler/share_handler.dart';
 import 'package:uri_to_file/uri_to_file.dart';
 import 'package:uuid/uuid.dart';
 import 'package:bookshelf/ui/devices/devices_screen.dart';
+import 'package:bookshelf/services/book_file_metadata.dart';
 
 class ShelfScreen extends ConsumerStatefulWidget {
   const ShelfScreen({super.key});
@@ -147,6 +148,7 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
       }
 
       await File(sharedFilePath).copy(destinationPath);
+      final metadata = await BookFileMetadata.fromPath(destinationPath);
 
       final newBook = Book(
         bookid: const Uuid().v4(), 
@@ -160,7 +162,9 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen>{
             lastpageread: 0, 
             totalpages: 0, 
             isarchived: false, 
-            addedat: DateTime.now()
+            addedat: DateTime.now(),
+            sha256: metadata.sha256,
+            filesizebytes: metadata.fileSizeBytes,
             );
 
             await ref.read(bookRepositoryProvider).addBook(newBook);
@@ -217,6 +221,7 @@ void _showBookActions(Book book){
     final destPath = '${appDir.path}/$filename';
 
     await File(sourcePath).copy(destPath);
+    final metadata = await BookFileMetadata.fromPath(destPath);
 
     if (!mounted) return;
 
@@ -241,7 +246,9 @@ void _showBookActions(Book book){
       isarchived: false,
       genreid: genreid,
       subgenreid: subgenreid,
-      addedat: DateTime.now(),      
+      addedat: DateTime.now(),
+      sha256: metadata.sha256,
+      filesizebytes: metadata.fileSizeBytes,
     );
 
     await ref.read(bookRepositoryProvider).addBook(newBook);
@@ -386,4 +393,3 @@ void _showBookActions(Book book){
    
   
 }
-

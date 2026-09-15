@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:bookshelf/data/models/book.dart';
 import 'package:bookshelf/data/models/genre.dart';
 import 'package:bookshelf/data/providers.dart';
+import 'package:bookshelf/services/book_file_metadata.dart';
 import 'package:bookshelf/utils/app_logger.dart';
 import 'package:bookshelf/widget/pdf_reader_screen.dart';
 import 'package:bookshelf/widget/subgenre_management_dialog.dart';
@@ -52,6 +53,7 @@ class _GenreDetailScreenState extends ConsumerState<GenreDetailScreen>{
       final destinationPath = '${appDir.path}/$fileName';
 
       await File(sourcePath).copy(destinationPath);
+      final metadata = await BookFileMetadata.fromPath(destinationPath);
 
       final newBook = Book(bookid: const Uuid().v4(),
        title: fileName.replaceAll(RegExp(r'\.pdf$', caseSensitive: false), ''), 
@@ -63,7 +65,9 @@ class _GenreDetailScreenState extends ConsumerState<GenreDetailScreen>{
        isarchived: false, 
        addedat: DateTime.now(),
        genreid: widget.genre.genreid,
-       subgenreid: selectedSubgenreId
+       subgenreid: selectedSubgenreId,
+       sha256: metadata.sha256,
+       filesizebytes: metadata.fileSizeBytes,
        );
 
        await ref.read(bookRepositoryProvider).addBook(newBook);

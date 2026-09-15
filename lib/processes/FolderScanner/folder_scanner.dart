@@ -1,8 +1,10 @@
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:bookshelf/data/models/book.dart';
 import 'package:bookshelf/data/models/watched_folder.dart';
 import 'package:bookshelf/data/repository/book_repository.dart';
+import 'package:bookshelf/services/book_file_metadata.dart';
 import 'package:bookshelf/utils/app_logger.dart';
 import 'package:uuid/uuid.dart';
 
@@ -38,17 +40,22 @@ class FolderScanner {
         final title = filename.contains('.')
             ? filename.substring(0, filename.lastIndexOf('.'))
             : filename;
+        final metadata = await BookFileMetadata.fromPath(entity.path);
 
         final book = Book(
           bookid: const Uuid().v4(),
           title: title,
           author: 'Unknown',
           filepath: entity.path,
-          spinecolor: 0xFF00B4A6,
+          spinecolor: Colors.primaries[
+            DateTime.now().second % Colors.primaries.length
+          ].value,
           lastpageread: 0,
           totalpages: 0,
           isarchived: false,
           addedat: DateTime.now(),
+          sha256: metadata.sha256,
+          filesizebytes: metadata.fileSizeBytes,
         );
 
         await bookRepo.addBook(book);

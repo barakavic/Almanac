@@ -11,6 +11,7 @@ class DbHelper {
     _migrateToV2,
     _migrateToV3,
     _migrateToV4,
+    _migrateToV5,
   ];
 
   int get _databaseVersion => _baseSchemaVersion + _migrations.length;
@@ -343,6 +344,37 @@ class DbHelper {
         stackTrace: st,
       );
       rethrow;
+    }
+  }
+
+  Future<void> _migrateToV5(Database db) async {
+    try {
+      await _addColumnIfMissing(db, 'books', 'isremote', 'INTEGER DEFAULT 0');
+      await _addColumnIfMissing(db, 'books', 'remotedeviceid', 'TEXT');
+      await _addColumnIfMissing(db, 'books', 'deviceid', 'TEXT');
+      await _addColumnIfMissing(db, 'books', 'lastopenedat', 'TEXT');
+      await _addColumnIfMissing(db, 'books', 'sha256', 'TEXT');
+      await _addColumnIfMissing(db, 'books', 'filesizebytes', 'INTEGER');
+    } catch (e, st) {
+      appLogger.e(
+        'Failed to create database version 5',
+        error: e,
+        stackTrace: st,
+      );
+      rethrow;
+    }
+  }
+
+  Future<void> _addColumnIfMissing( //Added at v5
+    Database db,
+    String table,
+    String column,
+    String definition,
+  ) async {
+    final columns = await db.rawQuery('PRAGMA table_info($table)');
+    final exists = columns.any((entry) => entry['name'] == column);
+    if (!exists) {
+      await db.execute('ALTER TABLE $table ADD COLUMN $column $definition');
     }
   }
 }

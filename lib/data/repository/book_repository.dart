@@ -112,6 +112,19 @@ Future<Book?> getBookByPath(String filePath) async{
   return Book.fromMap(rows.first);
 }
 
+Future<Book?> getLocalBookByChecksum(String checksum) async {
+  final db = await _db.database;
+  final rows = await db.query(
+    'books',
+    where: 'sha256 = ? AND isremote = ?',
+    whereArgs: [checksum, 0],
+    limit: 1,
+  );
+
+  if (rows.isEmpty) return null;
+  return Book.fromMap(rows.first);
+}
+
 Future<void> reassignBook(String bookid, String? genreid, String? subgenreid) async{
   try{
     final db = await _db.database;
@@ -157,4 +170,3 @@ Future<int?> getGenreColorByBook(String bookid) async{
 }
 
 }
-
