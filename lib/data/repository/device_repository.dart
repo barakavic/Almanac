@@ -47,4 +47,20 @@ class DeviceRepository {
       return [];
     }
   }
+
+  Future<int> deleteDevices(String deviceid) async{
+    try {
+      final db = await _db.database;
+      final deleteStatus = await db.delete(
+        'devices',
+        where: 'deviceid = ?',
+        whereArgs: [deviceid]
+      );
+      return deleteStatus;
+    } catch (e,st) {
+      appLogger.e('Failed to delete device',error: e,stackTrace: st);
+      rethrow;
+      
+    }
+  }
 }

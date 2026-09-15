@@ -4,26 +4,42 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 
 class DbHelper {
+  static const _baseSchemaVersion = 1;
   static Database? _db;
 
-  Future<Database> get database async{
-    _db??= await _initDB();
+  List<Future<void> Function(Database)> get _migrations => [
+    _migrateToV2,
+    _migrateToV3,
+    _migrateToV4,
+  ];
+
+  int get _databaseVersion => _baseSchemaVersion + _migrations.length;
+
+  Future<Database> get database async {
+    _db ??= await _initDB();
     return _db!;
   }
-  Future<Database> _initDB() async{
-    try{
-    final dir= await getApplicationDocumentsDirectory();
-    final path= join(dir.path, 'bookshelf.db');
-    return openDatabase(path, version: 3, onCreate: _onCreate, onUpgrade: _onUpgrade);
-    }
-    catch(e, st){
+
+  Future<Database> _initDB() async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final path = join(dir.path, 'bookshelf.db');
+      return openDatabase(
+        path,
+        version: _databaseVersion,
+        onCreate: _onCreate,
+        onUpgrade: _onUpgrade,
+      );
+    } catch (e, st) {
       appLogger.e('Failed to open database', error: e, stackTrace: st);
       rethrow;
     }
-}
-  Future<void> _onCreate(Database db, int version) async{
-    try{
-    await db.execute("""CREATE TABLE IF NOT EXISTS books( 
+  }
+
+  Future<void> _onCreate(Database db, int version) async {
+    try {
+      await db.execute(
+        """CREATE TABLE IF NOT EXISTS books( 
     bookid TEXT PRIMARY KEY, 
     title TEXT, 
     author TEXT, 
@@ -38,24 +54,24 @@ class DbHelper {
     aisummaryenabled INTEGER DEFAULT 1, 
     quizmode INTEGER DEFAULT 1, 
     FOREIGN KEY(genreid) REFERENCES genre(genreid) ON DELETE SET NULL, 
-    FOREIGN KEY(subgenreid) REFERENCES subgenre(subgenreid) ON DELETE SET NULL);"""
-);
+    FOREIGN KEY(subgenreid) REFERENCES subgenre(subgenreid) ON DELETE SET NULL);""",
+      );
 
-    await db.execute(""" CREATE TABLE IF NOT EXISTS genre( 
+      await db.execute(""" CREATE TABLE IF NOT EXISTS genre( 
     genreid TEXT PRIMARY KEY, 
     name TEXT, 
     genreColor INTEGER
     );
      """);
 
-    await db.execute(""" CREATE TABLE IF NOT EXISTS subgenre( 
+      await db.execute(""" CREATE TABLE IF NOT EXISTS subgenre( 
     subgenreid TEXT PRIMARY KEY, 
     subgenrename TEXT, 
     genreid TEXT, 
     FOREIGN KEY (genreid) REFERENCES genre(genreid) ON DELETE SET NULL );
     """);
 
-    await db.execute(""" CREATE TABLE IF NOT EXISTS annotations(
+      await db.execute(""" CREATE TABLE IF NOT EXISTS annotations(
     annotationid TEXT PRIMARY KEY, 
     bookid TEXT, 
     pagenumber INTEGER, 
@@ -66,7 +82,7 @@ class DbHelper {
     FOREIGN KEY(bookid) references books(bookid) ON DELETE CASCADE);
     """);
 
-    await db.execute('''CREATE TABLE IF NOT EXISTS summaries(
+      await db.execute('''CREATE TABLE IF NOT EXISTS summaries(
   summaryid TEXT PRIMARY KEY,
   bookid TEXT,
   frompage INTEGER,
@@ -77,33 +93,43 @@ class DbHelper {
   FOREIGN KEY(bookid) REFERENCES books(bookid) ON DELETE CASCADE
   );''');
 
-    await db.execute('''CREATE TABLE IF NOT EXISTS wishlist(
+      await db.execute('''CREATE TABLE IF NOT EXISTS wishlist(
   wishlistid TEXT PRIMARY KEY,
   coverpath TEXT,
   title TEXT,
   addedat TEXT
   );''');
 
-  await db.execute('''CREATE TABLE IF NOT EXISTS users(
+      await db.execute('''CREATE TABLE IF NOT EXISTS users(
   userid TEXT PRIMARY KEY,
   name TEXT,
   createdat TEXT
   );''');
 
-      if (version >= 2) {
-        await _onUpgrade(db, 1, version);
+      if (version > _baseSchemaVersion) {
+        await _onUpgrade(db, _baseSchemaVersion, version);
       }
-    }
-    catch(e, st){
+    } catch (e, st) {
       appLogger.e('Failed to create database', error: e, stackTrace: st);
       rethrow;
     }
-
   }
-  Future<void> _onUpgrade (Database db, int oldVersion, int newVersion) async{
-    if (oldVersion < 2){
-      try {
-        await db.execute('''
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    for (var version = oldVersion + 1; version <= newVersion; version++) {
+      final migrationIndex = version - _baseSchemaVersion - 1;
+      if (migrationIndex < 0 || migrationIndex >= _migrations.length) {
+        throw StateError(
+          'No database migration is registered for version $version.',
+        );
+      }
+      await _migrations[migrationIndex](db);
+    }
+  }
+
+  Future<void> _migrateToV2(Database db) async {
+    try {
+      await db.execute('''
         CREATE TABLE IF NOT EXISTS chapters(
         chapterid TEXT PRIMARY KEY,
         bookid TEXT,
@@ -116,7 +142,7 @@ class DbHelper {
         );
         ''');
 
-        await db.execute('''
+      await db.execute('''
         CREATE TABLE IF NOT EXISTS bookindex(
         indexid TEXT PRIMARY KEY,
         bookid TEXT,
@@ -126,7 +152,7 @@ class DbHelper {
         );
         ''');
 
-        await db.execute('''
+      await db.execute('''
         CREATE VIRTUAL TABLE book_fts USING fts4(
         content,
         bookid,
@@ -137,7 +163,7 @@ class DbHelper {
         );
         ''');
 
-        await db.execute('''
+      await db.execute('''
         CREATE TABLE IF NOT EXISTS devices(
         deviceid TEXT PRIMARY KEY,
         devicename TEXT,
@@ -150,7 +176,7 @@ class DbHelper {
         );
         ''');
 
-        await db.execute('''
+      await db.execute('''
         CREATE TABLE IF NOT EXISTS watched_folders(
         folderid TEXT PRIMARY KEY,
         deviceid TEXT NOT NULL,
@@ -170,7 +196,7 @@ class DbHelper {
         );
         ''');
 
-        await db.execute('''
+      await db.execute('''
         CREATE TABLE IF NOT EXISTS pendingtransfers(
         transferid TEXT PRIMARY KEY,
         bookid TEXT,
@@ -196,7 +222,7 @@ class DbHelper {
         );
         ''');
 
-        await db.execute('''
+      await db.execute('''
         CREATE TABLE IF NOT EXISTS event_log(
         eventid TEXT PRIMARY KEY,
         eventtype INTEGER,
@@ -213,25 +239,34 @@ class DbHelper {
         );
         ''');
 
-        await db.execute('ALTER TABLE books ADD COLUMN isindexed INTEGER DEFAULT 0;');
-        await db.execute('ALTER TABLE books ADD COLUMN isremote INTEGER DEFAULT 0;');
-        await db.execute('ALTER TABLE books ADD COLUMN remotedeviceid TEXT;');
-        await db.execute('ALTER TABLE books ADD COLUMN deviceid TEXT;');
-        await db.execute('ALTER TABLE books ADD COLUMN lastopenedat TEXT;');
+      await db.execute(
+        'ALTER TABLE books ADD COLUMN isindexed INTEGER DEFAULT 0;',
+      );
+      await db.execute(
+        'ALTER TABLE books ADD COLUMN isremote INTEGER DEFAULT 0;',
+      );
+      await db.execute('ALTER TABLE books ADD COLUMN remotedeviceid TEXT;');
+      await db.execute('ALTER TABLE books ADD COLUMN deviceid TEXT;');
+      await db.execute('ALTER TABLE books ADD COLUMN lastopenedat TEXT;');
 
-        await db.execute('ALTER TABLE wishlist ADD COLUMN deviceid TEXT;');
-        await db.execute('ALTER TABLE wishlist ADD COLUMN thumbnailpath TEXT;');
-        await db.execute('ALTER TABLE wishlist ADD COLUMN metadatafetched INTEGER DEFAULT 0;');
-      }
-       
-      catch (e, st) {
-        appLogger.e('Failed to create database version 2', error: e, stackTrace: st);
-        rethrow;
-      }
+      await db.execute('ALTER TABLE wishlist ADD COLUMN deviceid TEXT;');
+      await db.execute('ALTER TABLE wishlist ADD COLUMN thumbnailpath TEXT;');
+      await db.execute(
+        'ALTER TABLE wishlist ADD COLUMN metadatafetched INTEGER DEFAULT 0;',
+      );
+    } catch (e, st) {
+      appLogger.e(
+        'Failed to create database version 2',
+        error: e,
+        stackTrace: st,
+      );
+      rethrow;
     }
-    if (oldVersion < 3) {
-      try {
-        await db.execute('''
+  }
+
+  Future<void> _migrateToV3(Database db) async {
+    try {
+      await db.execute('''
         CREATE TABLE IF NOT EXISTS devices(
         deviceid TEXT PRIMARY KEY,
         devicename TEXT,
@@ -244,7 +279,7 @@ class DbHelper {
         );
         ''');
 
-        await db.execute('''
+      await db.execute('''
         CREATE TABLE IF NOT EXISTS paireddevices(
         pairingid TEXT PRIMARY KEY,
         localdeviceid TEXT NOT NULL,
@@ -258,22 +293,56 @@ class DbHelper {
         );
         ''');
 
-        for (final sql in [
-          'ALTER TABLE books ADD COLUMN volumeserial TEXT;',
-          'ALTER TABLE books ADD COLUMN relativepath TEXT;',
-          'ALTER TABLE books ADD COLUMN sha256 TEXT;',
-          'ALTER TABLE devices ADD COLUMN ipaddress TEXT;',
-          'ALTER TABLE devices ADD COLUMN pairingcode TEXT;',
-          'ALTER TABLE devices ADD COLUMN pairingcodeexpiresat TEXT;',
-        ]) {
-          try {
-            await db.execute(sql);
-          } catch (_) {}
-        }
-      } catch (e, st) {
-        appLogger.e('Failed to create database version 3', error: e, stackTrace: st);
-        rethrow;
+      for (final sql in [
+        'ALTER TABLE books ADD COLUMN volumeserial TEXT;',
+        'ALTER TABLE books ADD COLUMN relativepath TEXT;',
+        'ALTER TABLE books ADD COLUMN sha256 TEXT;',
+        'ALTER TABLE devices ADD COLUMN ipaddress TEXT;',
+        'ALTER TABLE devices ADD COLUMN pairingcode TEXT;',
+        'ALTER TABLE devices ADD COLUMN pairingcodeexpiresat TEXT;',
+      ]) {
+        try {
+          await db.execute(sql);
+        } catch (_) {}
       }
+    } catch (e, st) {
+      appLogger.e(
+        'Failed to create database version 3',
+        error: e,
+        stackTrace: st,
+      );
+      rethrow;
+    }
+  }
+
+  Future<void> _migrateToV4(Database db) async {
+    try {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS watched_folders(
+        folderid TEXT PRIMARY KEY,
+        deviceid TEXT NOT NULL,
+        displayname TEXT,
+        absolutepath TEXT,
+        relativepath TEXT,
+        volumeserial TEXT,
+        isremovable INTEGER,
+        isavailable INTEGER,
+        autoimport INTEGER,
+        recursive INTEGER,
+        scanstatus INTEGER,
+        lastscannedat TEXT,
+        lastseenat TEXT,
+        addedat TEXT,
+        FOREIGN KEY (deviceid) REFERENCES devices(deviceid) ON DELETE CASCADE
+        );
+        ''');
+    } catch (e, st) {
+      appLogger.e(
+        'Failed to create database version 4',
+        error: e,
+        stackTrace: st,
+      );
+      rethrow;
     }
   }
 }

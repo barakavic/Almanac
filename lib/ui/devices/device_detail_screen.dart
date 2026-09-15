@@ -12,41 +12,9 @@ class DeviceDetailScreen extends StatefulWidget {
 }
 
 class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
-  // Demo / Local Watched Folders list for specified device
   final List<WatchedFolder> _watchedFolders = [
-    WatchedFolder(
-      folderid: 'folder-1',
-      deviceid: 'device-1',
-      displayname: 'Main Bookshelf Library',
-      absolutepath: '/home/documents/books',
-      relativepath: 'books',
-      volumeserial: 'VOL1',
-      isremovable: 0,
-      isavailable: 1,
-      autoimport: 1,
-      recursive: 1,
-      scanstatus: 1,
-      lastscannedat: DateTime.parse('2026-09-03T18:00:00Z'),
-      lastseenat: DateTime.parse('2026-09-03T18:00:00Z'),
-      addedat: DateTime.parse('2026-09-01T10:00:00Z'),
-    ),
-    WatchedFolder(
-      folderid: 'folder-2',
-      deviceid: 'device-1',
-      displayname: 'Research Papers & PDFs',
-      absolutepath: '/home/documents/research',
-      relativepath: 'research',
-      volumeserial: 'VOL1',
-      isremovable: 0,
-      isavailable: 1,
-      autoimport: 1,
-      recursive: 0,
-      scanstatus: 1,
-      lastscannedat: DateTime.parse('2026-09-03T19:30:00Z'),
-      lastseenat: DateTime.parse('2026-09-03T19:30:00Z'),
-      addedat: DateTime.parse('2026-09-02T14:00:00Z'),
-    ),
-  ];
+    
+    ];
 
   @override
   Widget build(BuildContext context) {

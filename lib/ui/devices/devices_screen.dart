@@ -5,9 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:bookshelf/data/models/device.dart';
 import 'package:bookshelf/data/providers.dart';
 import 'package:bookshelf/services/sync_service.dart';
-import 'package:bookshelf/ui/devices/pairing_dialog.dart';
 import 'package:bookshelf/ui/devices/device_detail_screen.dart';
+import 'package:bookshelf/ui/devices/pairing_dialog.dart';
+import 'package:bookshelf/ui/folders/watched_folders_screen.dart';
 import 'package:bookshelf/utils/device_identity.dart';
+import 'package:bookshelf/utils/platform_utils.dart';
+
+enum _DeviceAction { remove }
 
 final pairedDevicesListProvider = FutureProvider<List<Device>>((ref) async {
   final repo = ref.watch(deviceRepositoryProvider);
@@ -52,7 +56,7 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
       if (device.deviceid == null) continue;
       final ip = device.macaddress; // Or stored ip
       final isAlive = await syncService.pingDevice(ip);
-      
+
       if (isAlive) {
         _pingFailCount[device.deviceid!] = 0;
         _deviceOnlineStatus[device.deviceid!] = true;
@@ -109,7 +113,9 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
 
   Future<String> _getLocalIp() async {
     try {
-      final interfaces = await NetworkInterface.list(type: InternetAddressType.IPv4);
+      final interfaces = await NetworkInterface.list(
+        type: InternetAddressType.IPv4,
+      );
       for (final interface in interfaces) {
         for (final addr in interface.addresses) {
           if (!addr.isLoopback) return addr.address;
@@ -139,7 +145,9 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  success ? 'Pairing successful!' : 'Pairing failed. Check network or code.',
+                  success
+                      ? 'Pairing successful!'
+                      : 'Pairing failed. Check network or code.',
                 ),
                 backgroundColor: success ? Colors.green : Colors.red,
               ),
@@ -151,6 +159,75 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
     );
   }
 
+  Future<void> _confirmAndDeleteDevice(Device device) async {
+    final deviceId = device.deviceid;
+    if (deviceId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('This device cannot be removed because it has no ID.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final deviceName = device.devicename ?? 'this device';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Remove paired device?'),
+        content: Text(
+          'Remove $deviceName from your paired devices? Any queued transfers for it will also be removed.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      final deleted = await ref
+          .read(deviceRepositoryProvider)
+          .deleteDevices(deviceId);
+      if (!mounted) return;
+
+      if (deleted == 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$deviceName was already removed.')),
+        );
+        ref.invalidate(pairedDevicesListProvider);
+        return;
+      }
+
+      setState(() {
+        _deviceOnlineStatus.remove(deviceId);
+        _pingFailCount.remove(deviceId);
+      });
+      ref.invalidate(pairedDevicesListProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$deviceName removed from paired devices.')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not remove $deviceName. Please try again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final devicesAsync = ref.watch(pairedDevicesListProvider);
@@ -160,6 +237,17 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
         title: const Text('Paired Devices'),
         actions: [
           IconButton(
+            tooltip: 'Library folders',
+            icon: const Icon(Icons.folder_open),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const WatchedFoldersScreen()),
+              );
+            },
+          ),
+          IconButton(
+            tooltip: 'Refresh devices',
             icon: const Icon(Icons.refresh),
             onPressed: () {
               ref.invalidate(pairedDevicesListProvider);
@@ -175,7 +263,11 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.devices_other, size: 64, color: Colors.grey.shade400),
+                  Icon(
+                    Icons.devices_other,
+                    size: 64,
+                    color: Colors.grey.shade400,
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     'No paired devices yet',
@@ -202,14 +294,22 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
               return Card(
                 elevation: 2,
                 margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   leading: Stack(
                     children: [
                       CircleAvatar(
                         backgroundColor: platformColor.withValues(alpha: 0.15),
-                        child: Icon(_getPlatformIcon(device.platform), color: platformColor),
+                        child: Icon(
+                          _getPlatformIcon(device.platform),
+                          color: platformColor,
+                        ),
                       ),
                       Positioned(
                         right: 0,
@@ -218,7 +318,9 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
                           width: 12,
                           height: 12,
                           decoration: BoxDecoration(
-                            color: isOnline ? const Color(0xFF4CAF50) : const Color(0xFF9E9E9E),
+                            color: isOnline
+                                ? const Color(0xFF4CAF50)
+                                : const Color(0xFF9E9E9E),
                             shape: BoxShape.circle,
                             border: Border.all(color: Colors.white, width: 2),
                           ),
@@ -235,7 +337,10 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: platformColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
@@ -259,11 +364,34 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
                           : 'Offline • Last seen: ${device.lastseenat}',
                       style: TextStyle(
                         fontSize: 12,
-                        color: isOnline ? Colors.green.shade700 : Colors.grey.shade600,
+                        color: isOnline
+                            ? Colors.green.shade700
+                            : Colors.grey.shade600,
                       ),
                     ),
                   ),
-                  trailing: const Icon(Icons.chevron_right),
+                  trailing: PlatformUtils.usesOverflowDeviceMenu
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            PopupMenuButton<_DeviceAction>(
+                              tooltip: 'Device actions',
+                              onSelected: (action) {
+                                if (action == _DeviceAction.remove) {
+                                  _confirmAndDeleteDevice(device);
+                                }
+                              },
+                              itemBuilder: (context) => const [
+                                PopupMenuItem(
+                                  value: _DeviceAction.remove,
+                                  child: Text('Remove paired device'),
+                                ),
+                              ],
+                            ),
+                            const Icon(Icons.chevron_right),
+                          ],
+                        )
+                      : const Icon(Icons.chevron_right),
                   onTap: () {
                     Navigator.push(
                       context,
@@ -272,13 +400,17 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
                       ),
                     );
                   },
+                  onLongPress: PlatformUtils.usesLongPressDeviceActions
+                      ? () => _confirmAndDeleteDevice(device)
+                      : null,
                 ),
               );
             },
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error loading devices: $err')),
+        error: (err, stack) =>
+            Center(child: Text('Error loading devices: $err')),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openPairingDialog,
