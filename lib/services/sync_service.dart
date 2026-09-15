@@ -65,6 +65,19 @@ class SyncService {
     return null;
   }
 
+  Future<String> _getLanIp() async {
+    try {
+      final interfaces = await NetworkInterface.list(
+        type: InternetAddressType.IPv4,
+        includeLoopback: false,
+      );
+      if (interfaces.isNotEmpty) {
+        return interfaces.first.addresses.first.address;
+      }
+    } catch (_) {}
+    return '0.0.0.0';
+  }
+
   Future<Device?> pairWithDevice(String targetInput) async {
     try {
       String hostIp = targetInput.trim();
@@ -90,6 +103,7 @@ class SyncService {
         deviceid: const Uuid().v4(),
         devicename: Platform.localHostname,
         platform: Platform.operatingSystem,
+        ipaddress: await _getLanIp(),
         macaddress: fingerprint,
         port: _port,
         createdat: DateTime.now().toIso8601String(),

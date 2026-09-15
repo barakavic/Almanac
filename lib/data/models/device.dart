@@ -4,6 +4,7 @@ class Device {
   final String? deviceid;
   final String? devicename;
   final String? platform;
+  final String ipaddress;
   final String macaddress;
   final String? mdnshostname;
   final int port;
@@ -14,6 +15,7 @@ class Device {
     this.deviceid,
     this.devicename,
     this.platform,
+    required this.ipaddress,
     required this.macaddress,
     this.mdnshostname,
     required this.port,
@@ -25,6 +27,7 @@ class Device {
     'deviceid': deviceid,
     'devicename': devicename,
     'platform': platform,
+    'ipaddress': ipaddress,
     'macaddress': macaddress,
     'mdnshostname': mdnshostname,
     'port': port,
@@ -38,6 +41,7 @@ class Device {
     deviceid: map['deviceid'],
     devicename: map['devicename'],
     platform: map['platform'],
+    ipaddress: map['ipaddress'] ?? '0.0.0.0',
     macaddress: map['macaddress'] ?? '',
     mdnshostname: map['mdnshostname'] ?? '',
     port: map['port'] ?? 8786,

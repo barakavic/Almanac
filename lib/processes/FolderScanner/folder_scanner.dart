@@ -1,6 +1,6 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
+
 import 'package:bookshelf/data/models/book.dart';
 import 'package:bookshelf/data/models/watched_folder.dart';
 import 'package:bookshelf/data/repository/book_repository.dart';
@@ -47,9 +47,7 @@ class FolderScanner {
           title: title,
           author: 'Unknown',
           filepath: entity.path,
-          spinecolor: Colors.primaries[
-            DateTime.now().second % Colors.primaries.length
-          ].value,
+          spinecolor: Colors.primaries[DateTime.now().second % Colors.primaries.length].value,
           lastpageread: 0,
           totalpages: 0,
           isarchived: false,

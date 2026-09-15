@@ -126,6 +126,7 @@ Future<shelf.Response> _pairhandler( shelf.Request request) async {
     deviceid:  const Uuid().v4(), 
     devicename: Platform.localHostname,
     platform: Platform.operatingSystem,
+    ipaddress: await _getLanIp(),
     macaddress: localDeviceUuid, //localDeviceUuid is initialized in the main.dart
     port: 8765, 
     createdat: DateTime.now().toIso8601String(), 
