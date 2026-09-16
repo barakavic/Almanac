@@ -1,8 +1,9 @@
 import 'dart:io';
 
+import 'package:bookshelf/data/providers.dart';
+import 'package:bookshelf/services/app_permissions.dart';
 import 'package:bookshelf/theme/app_theme.dart';
 import 'package:bookshelf/widget/shelf_screen.dart';
-import 'package:bookshelf/data/providers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,6 +21,7 @@ Future<void> main() async {
   PaintingBinding.instance.imageCache.maximumSizeBytes = 200 * 1024 * 1024;
 
   final sharedPreferences = await SharedPreferences.getInstance();
+  await AppPermissions.requestInitialPermissions();
 
   runApp(ProviderScope(
     

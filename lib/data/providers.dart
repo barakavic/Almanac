@@ -11,9 +11,12 @@ import 'package:bookshelf/data/repository/genre_repository.dart';
 import 'package:bookshelf/data/repository/subgenre_repository.dart';
 import 'package:bookshelf/data/repository/watched_folder_repository.dart';
 import 'package:bookshelf/utils/device_identity.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:bookshelf/data/repository/pending_transfer_repository.dart';
 import 'package:bookshelf/services/shelf_service.dart';
+import 'package:bookshelf/services/transfer_service.dart';
 
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
   throw UnimplementedError();
@@ -102,6 +105,22 @@ final watchedFoldersProvider = FutureProvider<List<WatchedFolder>>((ref) async {
   return ref
       .watch(watchedFolderRepositoryProvider)
       .getFolderForDevice(deviceId);
+});
+
+final pendingTransferRepositoryProvider = Provider<PendingTransferRepository>((ref) {
+  return PendingTransferRepository(ref.watch(dbHelperProvider));
+});
+
+final transferServiceProvider = Provider<TransferService>((ref) {
+  return TransferService(
+    ref.watch(bookRepositoryProvider),
+    ref.watch(watchedFolderRepositoryProvider),
+    ref.watch(pendingTransferRepositoryProvider),
+  );
+});
+
+final transferProgressProvider = Provider<ValueNotifier<TransferProgressState>>((ref) {
+  return ref.watch(transferServiceProvider).progressNotifier;
 });
 
 final almanacServerProvider = FutureProvider<AlmanacServer>((ref) async {

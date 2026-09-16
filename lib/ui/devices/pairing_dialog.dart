@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:bookshelf/services/app_permissions.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 String generatePairingCode(String deviceUuid) {
   final window = DateTime.now().millisecondsSinceEpoch ~/ (90 * 1000);
@@ -66,6 +68,28 @@ class _PairingDialogState extends State<PairingDialog> {
   void _refreshCode() {
     _currentCode = generatePairingCode(widget.deviceUuid);
     _secondsRemaining = getSecondsRemainingInWindow();
+  }
+
+  Future<void> _requestCameraPermissionIfNeeded() async {
+    final status = await AppPermissions.ensureCameraPermission();
+
+    if (!mounted) return;
+
+    if (status.isDenied || status.isPermanentlyDenied || status.isRestricted) {
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Camera access needed'),
+          content: const Text('Please allow camera access to scan a QR code.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   @override
@@ -170,7 +194,13 @@ class _PairingDialogState extends State<PairingDialog> {
                     ChoiceChip(
                       label: const Text('Scan QR'),
                       selected: _selectedTab == 3,
-                      onSelected: (_) => setState(() => _selectedTab = 3),
+                      onSelected: (_) async {
+                        await _requestCameraPermissionIfNeeded();
+                        if (!mounted) return;
+                        if ((await Permission.camera.status).isGranted) {
+                          setState(() => _selectedTab = 3);
+                        }
+                      },
                     ),
                   ],
                 ],

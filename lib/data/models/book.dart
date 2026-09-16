@@ -5,7 +5,7 @@ class Book {
   final String bookid;
   final String title;
   final String author;
-  final String filepath;
+  final String? filepath;
   final int spinecolor;
   final String? genreid;
   final String? subgenreid;
@@ -24,7 +24,7 @@ class Book {
     required this.bookid,
     required this.title,
     required this.author,
-    required this.filepath,
+    this.filepath,
     required this.spinecolor,
     this.genreid,
     this.subgenreid,
@@ -69,7 +69,7 @@ class Book {
         bookid: map['bookid'] ?? '',
         title: map['title'] ?? '',
         author: map['author'] ?? '',
-        filepath: map['filepath'] ?? '',
+        filepath: map['filepath'] as String?,
         spinecolor: map['spinecolor'] ?? 0,
         genreid: map['genreid'],
         subgenreid: map['subgenreid'],

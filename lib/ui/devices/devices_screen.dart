@@ -60,6 +60,7 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
       if (isAlive) {
         _pingFailCount[device.deviceid!] = 0;
         _deviceOnlineStatus[device.deviceid!] = true;
+        ref.read(transferServiceProvider).processQueueForDevice(device);
       } else {
         final fails = (_pingFailCount[device.deviceid!] ?? 0) + 1;
         _pingFailCount[device.deviceid!] = fails;
@@ -123,6 +124,14 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
       }
     } catch (_) {}
     return '127.0.0.1';
+  }
+
+  Future<void> _refreshDevices() async {
+    ref.invalidate(pairedDevicesListProvider);
+    await ref.read(pairedDevicesListProvider.future);
+    if (mounted) {
+      unawaited(_checkAllDevicesHealth());
+    }
   }
 
   Future<void> _openPairingDialog() async {
@@ -256,161 +265,178 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
           ),
         ],
       ),
-      body: devicesAsync.when(
-        data: (devices) {
-          if (devices.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+      body: RefreshIndicator(
+        onRefresh: _refreshDevices,
+        child: devicesAsync.when(
+          data: (devices) {
+            if (devices.isEmpty) {
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
                 children: [
-                  Icon(
-                    Icons.devices_other,
-                    size: 64,
-                    color: Colors.grey.shade400,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No paired devices yet',
-                    style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Tap the + button below to pair a laptop or phone',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(12),
-            itemCount: devices.length,
-            itemBuilder: (context, index) {
-              final device = devices[index];
-              final isOnline = _deviceOnlineStatus[device.deviceid] ?? true;
-              final platformColor = _getPlatformColor(device.platform);
-
-              return Card(
-                elevation: 2,
-                margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  leading: Stack(
-                    children: [
-                      CircleAvatar(
-                        backgroundColor: platformColor.withValues(alpha: 0.15),
-                        child: Icon(
-                          _getPlatformIcon(device.platform),
-                          color: platformColor,
-                        ),
-                      ),
-                      Positioned(
-                        right: 0,
-                        bottom: 0,
-                        child: Container(
-                          width: 12,
-                          height: 12,
-                          decoration: BoxDecoration(
-                            color: isOnline
-                                ? const Color(0xFF4CAF50)
-                                : const Color(0xFF9E9E9E),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
+                  SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.7,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.devices_other,
+                            size: 64,
+                            color: Colors.grey.shade400,
                           ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  title: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          device.devicename ?? 'Unknown Device',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: platformColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          (device.platform ?? 'Device').toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: platformColor,
+                          const SizedBox(height: 16),
+                          Text(
+                            'No paired devices yet',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey.shade600,
+                            ),
                           ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  subtitle: Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      isOnline
-                          ? 'Online • Port ${device.port}'
-                          : 'Offline • Last seen: ${device.lastseenat}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isOnline
-                            ? Colors.green.shade700
-                            : Colors.grey.shade600,
+                          const SizedBox(height: 8),
+                          Text(
+                            'Tap the + button below to pair a laptop or phone',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade500,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  trailing: PlatformUtils.usesOverflowDeviceMenu
-                      ? Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            PopupMenuButton<_DeviceAction>(
-                              tooltip: 'Device actions',
-                              onSelected: (action) {
-                                if (action == _DeviceAction.remove) {
-                                  _confirmAndDeleteDevice(device);
-                                }
-                              },
-                              itemBuilder: (context) => const [
-                                PopupMenuItem(
-                                  value: _DeviceAction.remove,
-                                  child: Text('Remove paired device'),
-                                ),
-                              ],
-                            ),
-                            const Icon(Icons.chevron_right),
-                          ],
-                        )
-                      : const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => DeviceDetailScreen(device: device),
-                      ),
-                    );
-                  },
-                  onLongPress: PlatformUtils.usesLongPressDeviceActions
-                      ? () => _confirmAndDeleteDevice(device)
-                      : null,
-                ),
+                ],
               );
-            },
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) =>
-            Center(child: Text('Error loading devices: $err')),
+            }
+
+            return ListView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: devices.length,
+              itemBuilder: (context, index) {
+                final device = devices[index];
+                final isOnline = _deviceOnlineStatus[device.deviceid] ?? true;
+                final platformColor = _getPlatformColor(device.platform);
+
+                return Card(
+                  elevation: 2,
+                  margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    leading: Stack(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: platformColor.withValues(alpha: 0.15),
+                          child: Icon(
+                            _getPlatformIcon(device.platform),
+                            color: platformColor,
+                          ),
+                        ),
+                        Positioned(
+                          right: 0,
+                          bottom: 0,
+                          child: Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: isOnline
+                                  ? const Color(0xFF4CAF50)
+                                  : const Color(0xFF9E9E9E),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    title: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            device.devicename ?? 'Unknown Device',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: platformColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            (device.platform ?? 'Device').toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: platformColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        isOnline
+                            ? 'Online • Port ${device.port}'
+                            : 'Offline • Last seen: ${device.lastseenat}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isOnline
+                              ? Colors.green.shade700
+                              : Colors.grey.shade600,
+                        ),
+                      ),
+                    ),
+                    trailing: PlatformUtils.usesOverflowDeviceMenu
+                        ? Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              PopupMenuButton<_DeviceAction>(
+                                tooltip: 'Device actions',
+                                onSelected: (action) {
+                                  if (action == _DeviceAction.remove) {
+                                    _confirmAndDeleteDevice(device);
+                                  }
+                                },
+                                itemBuilder: (context) => const [
+                                  PopupMenuItem(
+                                    value: _DeviceAction.remove,
+                                    child: Text('Remove paired device'),
+                                  ),
+                                ],
+                              ),
+                              const Icon(Icons.chevron_right),
+                            ],
+                          )
+                        : const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => DeviceDetailScreen(device: device),
+                        ),
+                      );
+                    },
+                    onLongPress: PlatformUtils.usesLongPressDeviceActions
+                        ? () => _confirmAndDeleteDevice(device)
+                        : null,
+                  ),
+                );
+              },
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, stack) =>
+              Center(child: Text('Error loading devices: $err')),
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openPairingDialog,

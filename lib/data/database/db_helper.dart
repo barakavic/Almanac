@@ -12,6 +12,7 @@ class DbHelper {
     _migrateToV3,
     _migrateToV4,
     _migrateToV5,
+    _migrateToV6,
   ];
 
   int get _databaseVersion => _baseSchemaVersion + _migrations.length;
@@ -44,7 +45,7 @@ class DbHelper {
     bookid TEXT PRIMARY KEY, 
     title TEXT, 
     author TEXT, 
-    filepath TEXT UNIQUE, 
+    filepath TEXT NULL, 
     spinecolor INTEGER, 
     genreid TEXT, 
     subgenreid TEXT, 
@@ -211,7 +212,7 @@ class DbHelper {
         priority INTEGER,
         status INTEGER,
         retrycount INTEGER,
-        temppath TEXT,
+        temppath TEXT NULL,
         relayrecievedat TEXT,
         relayexpiresat TEXT,
         lastattemptedat TEXT,
@@ -358,6 +359,60 @@ class DbHelper {
     } catch (e, st) {
       appLogger.e(
         'Failed to create database version 5',
+        error: e,
+        stackTrace: st,
+      );
+      rethrow;
+    }
+  }
+
+  Future<void> _migrateToV6(Database db) async {
+    try {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS pendingtransfers(
+        transferid TEXT PRIMARY KEY,
+        bookid TEXT,
+        sourcedeviceid TEXT,
+        targetdeviceid TEXT,
+        relaydeviceid TEXT,
+        filechecksum TEXT,
+        filesizebytes INTEGER,
+        transfertype INTEGER,
+        currenthop INTEGER,
+        priority INTEGER,
+        status INTEGER,
+        retrycount INTEGER,
+        temppath TEXT NULL,
+        relayrecievedat TEXT,
+        relayexpiresat TEXT,
+        lastattemptedat TEXT,
+        createdat TEXT,
+        FOREIGN KEY (bookid) REFERENCES books(bookid) ON DELETE CASCADE,
+        FOREIGN KEY (sourcedeviceid) REFERENCES devices(deviceid) ON DELETE CASCADE,
+        FOREIGN KEY (targetdeviceid) REFERENCES devices(deviceid) ON DELETE CASCADE,
+        FOREIGN KEY (relaydeviceid) REFERENCES devices(deviceid) ON DELETE SET NULL
+        );
+        ''' );
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS event_log(
+        eventid TEXT PRIMARY KEY,
+        eventtype INTEGER,
+        severity INTEGER,
+        deviceid TEXT,
+        bookid TEXT,
+        transferid TEXT,
+        message TEXT,
+        metadatajson TEXT,
+        createdat TEXT,
+        FOREIGN KEY (deviceid) REFERENCES devices(deviceid) ON DELETE SET NULL,
+        FOREIGN KEY (bookid) REFERENCES books(bookid) ON DELETE SET NULL,
+        FOREIGN KEY (transferid) REFERENCES pendingtransfers(transferid) ON DELETE SET NULL
+        );
+        ''' );
+    } catch (e, st) {
+      appLogger.e(
+        'Failed to create database version 6',
         error: e,
         stackTrace: st,
       );

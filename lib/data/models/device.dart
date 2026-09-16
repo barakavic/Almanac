@@ -10,6 +10,7 @@ class Device {
   final int port;
   final String createdat;
   final String lastseenat;
+  final String? pairingcode;
 
   const Device({
     this.deviceid,
@@ -21,6 +22,7 @@ class Device {
     required this.port,
     required this.createdat,
     required this.lastseenat,
+    this.pairingcode,
     });
 
   Map<String, dynamic> toMap() => {
@@ -33,6 +35,7 @@ class Device {
     'port': port,
     'createdat': createdat,
     'lastseenat': lastseenat,
+    'pairingcode': pairingcode,
   };
 
   factory Device.fromMap(Map<String, dynamic> map) {
@@ -47,6 +50,7 @@ class Device {
     port: map['port'] ?? 8786,
     createdat: map['createdat'] ?? '',
     lastseenat: map['lastseenat'] ?? '',
+    pairingcode: map['pairingcode'],
   );}
   catch(e,st)
   {

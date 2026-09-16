@@ -17,13 +17,8 @@ class AlmanacServer{
   HttpServer? _httpserver;
   final Router _router = Router();
   final BookRepository _bookrepository;
-  String _pairingToken = '';
   final DeviceRepository _deviceRepository;
   final String localDeviceUuid;
-
-    void setPairingToken(String token){
-    _pairingToken = token;
-  }
 
   shelf.Handler get _handler => shelf.Pipeline()
   .addMiddleware(_authMiddleware())
@@ -37,11 +32,19 @@ class AlmanacServer{
         }
 
         final token = request.headers['x-almanac-token'];
-        if (token == null || token != _pairingToken){
+        if (token == null){
           return shelf.Response.forbidden(
-            jsonEncode(
-              {'error': 'Unauthorized Device'}
-            ),
+            jsonEncode({'error': 'Unauthorized Device'}),
+            headers: {'Content-Type': 'application/json'},
+          );
+        }
+
+        final devices = await _deviceRepository.getAllDevices();
+        final isValid = devices.any((d) => d.pairingcode == token);
+
+        if (!isValid){
+          return shelf.Response.forbidden(
+            jsonEncode({'error': 'Unauthorized Device'}),
             headers: {'Content-Type': 'application/json'},
           );
         }
@@ -69,8 +72,10 @@ class AlmanacServer{
     this.localDeviceUuid
 
   ){
+    _router.get('/health', _healthhandler);
     _router.get('/ping', _pinghandler);
-    _router.get('/books', _bookshandler);
+    _router.get('/books/manifest', _bookshandler);
+    _router.get('/books/<bookId>/download', _downloadhandler);
     _router.post('/pair', _pairhandler);
   }
 
@@ -109,6 +114,33 @@ class AlmanacServer{
     }
   }
 
+  Future<shelf.Response> _downloadhandler(shelf.Request request, String bookId) async{
+    try{
+      final book = await _bookrepository.getBookById(bookId);
+      if (book == null) return shelf.Response.notFound('Book not found');
+      final filepath = book.filepath;
+      if (filepath == null || filepath.isEmpty) {
+        return shelf.Response.notFound('File not found');
+      }
+      
+      final file = File(filepath);
+      if (!await file.exists()) return shelf.Response.notFound('File not found');
+
+      final fileStream = file.openRead();
+      return shelf.Response.ok(
+        fileStream,
+        headers: {
+          'Content-Type': 'application/octet-stream',
+          'Content-Length': file.lengthSync().toString(),
+          'Content-Disposition': 'attachment; filename="${book.title}"'
+        }
+      );
+    }catch(e, st){
+      appLogger.e('Failed to download book', error: e, stackTrace: st);
+      return shelf.Response.internalServerError();
+    }
+  }
+
 
 Future<shelf.Response> _pairhandler( shelf.Request request) async {
     
@@ -123,12 +155,13 @@ Future<shelf.Response> _pairhandler( shelf.Request request) async {
     appLogger.i('Paired Successfully with ${incomingDevice.devicename}');
 
     final myDevice = Device(
-    deviceid:  const Uuid().v4(), 
+    deviceid:  localDeviceUuid, 
     devicename: Platform.localHostname,
     platform: Platform.operatingSystem,
     ipaddress: await _getLanIp(),
-    macaddress: localDeviceUuid, //localDeviceUuid is initialized in the main.dart
+    macaddress: '', 
     port: 8765, 
+    pairingcode: incomingDevice.pairingcode,
     createdat: DateTime.now().toIso8601String(), 
     lastseenat: DateTime.now().toIso8601String()
     );
@@ -167,6 +200,16 @@ Future<shelf.Response> _pairhandler( shelf.Request request) async {
    
   }
    return '0.0.0.0';
+}
+
+Future<shelf.Response> _healthhandler(shelf.Request request) async{
+  return shelf.Response.ok(
+    jsonEncode({
+      'status': 'ok',
+      'device_name': Platform.localHostname
+    }),
+    headers: {'Content-Type': 'application/json'}
+  );
 }
   
 

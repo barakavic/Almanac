@@ -112,6 +112,18 @@ Future<Book?> getBookByPath(String filePath) async{
   return Book.fromMap(rows.first);
 }
 
+Future<Book?> getBookById(String bookid) async {
+  final db = await _db.database;
+  final rows = await db.query(
+    'books',
+    where: 'bookid = ?',
+    whereArgs: [bookid],
+    limit: 1,
+  );
+  if (rows.isEmpty) return null;
+  return Book.fromMap(rows.first);
+}
+
 Future<Book?> getLocalBookByChecksum(String checksum) async {
   final db = await _db.database;
   final rows = await db.query(

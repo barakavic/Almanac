@@ -100,7 +100,7 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> with WidgetsB
   Widget build(BuildContext context){
     final book  = widget.book;
     final pdfViewer = SfPdfViewer.file(
-        File(book.filepath),
+        File(book.filepath!),
         canShowScrollHead: _showScrollHead,
         controller: _pdfViewerController,
         scrollDirection: _pdfScrollDirection,

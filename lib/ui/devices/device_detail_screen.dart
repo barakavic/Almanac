@@ -1,20 +1,159 @@
-import 'package:flutter/material.dart';
-import 'package:bookshelf/data/models/device.dart';
-import 'package:bookshelf/data/models/watched_folder.dart';
+import 'dart:io';
 
-class DeviceDetailScreen extends StatefulWidget {
+import 'package:bookshelf/data/models/book.dart';
+import 'package:bookshelf/data/models/device.dart';
+import 'package:bookshelf/data/providers.dart';
+import 'package:bookshelf/services/transfer_service.dart';
+import 'package:bookshelf/widget/transfer_progress_banner.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+class DeviceDetailScreen extends ConsumerStatefulWidget {
   final Device device;
 
   const DeviceDetailScreen({super.key, required this.device});
 
   @override
-  State<DeviceDetailScreen> createState() => _DeviceDetailScreenState();
+  ConsumerState<DeviceDetailScreen> createState() => _DeviceDetailScreenState();
 }
 
-class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
-  final List<WatchedFolder> _watchedFolders = [
-    
-    ];
+class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
+  List<Book> _remoteBooks = [];
+  bool _isLoadingManifest = false;
+  String? _manifestError;
+
+  Future<void> _fetchManifest() async {
+    setState(() {
+      _isLoadingManifest = true;
+      _manifestError = null;
+    });
+
+    try {
+      final transferService = ref.read(transferServiceProvider);
+      final manifest = await transferService.fetchRemoteManifest(widget.device);
+
+      setState(() {
+        _remoteBooks = manifest;
+        _isLoadingManifest = false;
+        if (manifest.isEmpty) {
+          _manifestError = 'No books found or device unreachable.';
+        }
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingManifest = false;
+        _manifestError = 'Failed to fetch manifest: $e';
+      });
+    }
+  }
+
+  Future<void> _showTransferProblemDialog(String title, String message) async {
+    if (!mounted) return;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _downloadSingleBook(Book book) async {
+    try {
+      final transferService = ref.read(transferServiceProvider);
+      final success = await transferService.downloadBook(
+        remoteDevice: widget.device,
+        remoteBook: book,
+      );
+
+      if (mounted) {
+        if (success) {
+          ref.invalidate(booksProvider);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Downloaded "${book.title}" successfully.')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Download failed for "${book.title}".'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    } on NoWatchedFolderException catch (e) {
+      if (mounted) {
+        await _showTransferProblemDialog(
+          'No writable library folder',
+          e.message,
+        );
+      }
+    } on PathAccessException catch (_) {
+      if (mounted) {
+        await _showTransferProblemDialog(
+          'Storage permission required',
+          'This folder is not writable from this app. The download will use a safe app storage folder instead.',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        await _showTransferProblemDialog(
+          'Transfer failed',
+          'The download could not complete.\n\nDetails: $e',
+        );
+      }
+    }
+  }
+
+  Future<void> _downloadAllBooks() async {
+    if (_remoteBooks.isEmpty) return;
+
+    try {
+      final transferService = ref.read(transferServiceProvider);
+      final success = await transferService.downloadBatch(
+        remoteDevice: widget.device,
+        books: _remoteBooks,
+      );
+
+      if (mounted) {
+        ref.invalidate(booksProvider);
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('All books downloaded successfully.')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Some downloads failed.'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    } on NoWatchedFolderException catch (e) {
+      if (mounted) {
+        await _showTransferProblemDialog(
+          'No writable library folder',
+          e.message,
+        );
+      }
+    } on PathAccessException catch (_) {
+      if (mounted) {
+        await _showTransferProblemDialog(
+          'Storage permission required',
+          'This folder is not writable from this app. The download will use a safe app storage folder instead.',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        await _showTransferProblemDialog(
+          'Transfer failed',
+          'The download could not complete.\n\nDetails: $e',
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,10 +162,17 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(dev.devicename ?? 'Device Details'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Fetch Remote Manifest',
+            onPressed: _isLoadingManifest ? null : _fetchManifest,
+          ),
+        ],
       ),
       body: Column(
         children: [
-          // Device Header Info Card
+          const TransferProgressBanner(),
           Container(
             width: double.infinity,
             margin: const EdgeInsets.all(16),
@@ -54,12 +200,12 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Platform: ${dev.platform?.toUpperCase() ?? "UNKNOWN"} • Port: ${dev.port}',
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                        'Platform: ${dev.platform?.toUpperCase() ?? "UNKNOWN"} • IP: ${dev.ipaddress}',
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
                       ),
                       Text(
-                        'MAC / UUID: ${dev.macaddress}',
-                        style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                        'Device ID: ${dev.deviceid ?? "Unspecified"}',
+                        style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
                       ),
                     ],
                   ),
@@ -67,114 +213,83 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
               ],
             ),
           ),
-
-          // Watched Folders Header
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Watched Folders',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          if (_remoteBooks.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: ElevatedButton.icon(
+                  onPressed: _downloadAllBooks,
+                  icon: const Icon(Icons.download, size: 16),
+                  label: const Text('Download All'),
+                ),
               ),
             ),
-          ),
-
-          // Folders List (2 Sublayer Navigation)
           Expanded(
-            child: _watchedFolders.isEmpty
-                ? Center(
-                    child: Text(
-                      'No watched folders declared for this device.',
-                      style: TextStyle(color: Colors.grey.shade600),
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: _watchedFolders.length,
-                    itemBuilder: (context, index) {
-                      final folder = _watchedFolders[index];
-                      final isRecursive = folder.recursive == 1;
-
-                      return Card(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        child: ExpansionTile(
-                          leading: const Icon(Icons.folder_special, color: Colors.amber),
-                          title: Text(
-                            folder.displayname,
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          subtitle: Text(
-                            'Path: ${folder.absolutepath} (Recursive: ${isRecursive ? "Yes" : "No"})',
-                            style: const TextStyle(fontSize: 11),
-                          ),
+            child: _isLoadingManifest
+                ? const Center(child: CircularProgressIndicator())
+                : _manifestError != null
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            // Sublayer Level 1: Sub-directories / Books
-                            ListTile(
-                              leading: const Icon(Icons.folder, size: 20),
-                              title: const Text('Sublayer 1: /Computer Science'),
-                              subtitle: const Text('2 Books (.pdf, .epub)'),
-                              trailing: const Icon(Icons.chevron_right, size: 18),
-                              onTap: () {
-                                _showSublayerDialog(context, 'Computer Science', [
-                                  'Clean Code.pdf',
-                                  'Designing Data-Intensive Applications.epub'
-                                ]);
-                              },
-                            ),
-                            ListTile(
-                              leading: const Icon(Icons.folder, size: 20),
-                              title: const Text('Sublayer 1: /Fiction & Classics'),
-                              subtitle: const Text('1 Book (.epub)'),
-                              trailing: const Icon(Icons.chevron_right, size: 18),
-                              onTap: () {
-                                _showSublayerDialog(context, 'Fiction & Classics', [
-                                  'Dune.epub'
-                                ]);
-                              },
+                            Text(_manifestError!, style: TextStyle(color: Colors.grey.shade400)),
+                            const SizedBox(height: 12),
+                            ElevatedButton.icon(
+                              onPressed: _fetchManifest,
+                              icon: const Icon(Icons.sync),
+                              label: const Text('Fetch Remote Manifest'),
                             ),
                           ],
                         ),
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
+                      )
+                    : _remoteBooks.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.cloud_download, size: 48, color: Colors.grey.shade600),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Tap below to inspect remote books on this device',
+                                  style: TextStyle(color: Colors.grey.shade400),
+                                ),
+                                const SizedBox(height: 12),
+                                ElevatedButton.icon(
+                                  onPressed: _fetchManifest,
+                                  icon: const Icon(Icons.sync),
+                                  label: const Text('Fetch Remote Manifest'),
+                                ),
+                              ],
+                            ),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            itemCount: _remoteBooks.length,
+                            itemBuilder: (context, index) {
+                              final book = _remoteBooks[index];
+                              final sizeMb = ((book.filesizebytes ?? 0) / (1024 * 1024)).toStringAsFixed(1);
 
-  void _showSublayerDialog(BuildContext context, String folderName, List<String> books) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            const Icon(Icons.folder_open, color: Colors.amber),
-            const SizedBox(width: 8),
-            Text(folderName),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: books
-              .map(
-                (book) => ListTile(
-                  dense: true,
-                  leading: Icon(
-                    book.endsWith('.pdf') ? Icons.picture_as_pdf : Icons.menu_book,
-                    color: book.endsWith('.pdf') ? Colors.red : Colors.blue,
-                  ),
-                  title: Text(book),
-                ),
-              )
-              .toList(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Close'),
+                              return Card(
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                child: ListTile(
+                                  leading: const CircleAvatar(
+                                    child: Icon(Icons.book),
+                                  ),
+                                  title: Text(
+                                    book.title,
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  subtitle: Text('${book.author} • $sizeMb MB'),
+                                  trailing: IconButton(
+                                    icon: const Icon(Icons.download_for_offline, color: Colors.blue),
+                                    tooltip: 'Download Book',
+                                    onPressed: () => _downloadSingleBook(book),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
           ),
         ],
       ),

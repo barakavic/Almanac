@@ -98,14 +98,16 @@ class SyncService {
       }
 
       final fingerprint = await getDeviceFingerprint();
+      final sharedToken = const Uuid().v4();
 
       final myDevice = Device(
-        deviceid: const Uuid().v4(),
+        deviceid: fingerprint,
         devicename: Platform.localHostname,
         platform: Platform.operatingSystem,
         ipaddress: await _getLanIp(),
-        macaddress: fingerprint,
+        macaddress: '',
         port: _port,
+        pairingcode: sharedToken,
         createdat: DateTime.now().toIso8601String(),
         lastseenat: DateTime.now().toIso8601String(),
       );

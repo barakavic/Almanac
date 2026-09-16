@@ -139,7 +139,9 @@ class _WatchedFoldersScreenState extends ConsumerState<WatchedFoldersScreen> {
         ),
       ),
     );
-    controller.dispose();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.dispose();
+    });
     return result;
   }
 
@@ -232,84 +234,113 @@ class _WatchedFoldersScreenState extends ConsumerState<WatchedFoldersScreen> {
     return timestamp.toLocal().toString().split('.').first;
   }
 
+  Future<void> _refreshFolders() async {
+    ref.invalidate(watchedFoldersProvider);
+    await ref.read(watchedFoldersProvider.future);
+  }
+
   @override
   Widget build(BuildContext context) {
     final foldersAsync = ref.watch(watchedFoldersProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Library Folders')),
-      body: foldersAsync.when(
-        data: (folders) {
-          if (folders.isEmpty) {
-            return const Center(child: Text('No folders are being watched.'));
-          }
-
-          return ListView.separated(
-            padding: const EdgeInsets.all(12),
-            itemCount: folders.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 8),
-            itemBuilder: (context, index) {
-              final folder = folders[index];
-              final isScanning = _scanningFolderIds.contains(folder.folderid);
-              final isAvailable = Directory(folder.absolutepath).existsSync();
-
-              return Card(
-                child: ListTile(
-                  leading: Icon(
-                    isAvailable ? Icons.folder : Icons.folder_off,
-                    color: isAvailable
-                        ? Theme.of(context).colorScheme.primary
-                        : Colors.grey,
-                  ),
-                  title: Text(folder.displayname),
-                  subtitle: Text(
-                    '${folder.absolutepath}\n'
-                    '${folder.recursive == 1 ? 'Includes subfolders' : 'This folder only'} • '
-                    'Last scan: ${_formatTimestamp(folder.lastscannedat)}',
-                  ),
-                  isThreeLine: true,
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        tooltip: 'Scan folder',
-                        onPressed: isAvailable && !isScanning
-                            ? () => _scanFolder(folder)
-                            : null,
-                        icon: isScanning
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.refresh),
-                      ),
-                      PopupMenuButton<_FolderAction>(
-                        tooltip: 'Folder actions',
-                        onSelected: (action) {
-                          if (action == _FolderAction.remove) {
-                            _removeFolder(folder);
-                          }
-                        },
-                        itemBuilder: (context) => const [
-                          PopupMenuItem(
-                            value: _FolderAction.remove,
-                            child: Text('Stop watching'),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              );
+      appBar: AppBar(
+        title: const Text('Library Folders'),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh folders',
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              ref.invalidate(watchedFoldersProvider);
             },
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) =>
-            Center(child: Text('Could not load folders: $error')),
+          ),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: _refreshFolders,
+        child: foldersAsync.when(
+          data: (folders) {
+            if (folders.isEmpty) {
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: [
+                  SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.7,
+                    child: const Center(
+                      child: Text('No folders are being watched.'),
+                    ),
+                  ),
+                ],
+              );
+            }
+
+            return ListView.separated(
+              padding: const EdgeInsets.all(12),
+              itemCount: folders.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final folder = folders[index];
+                final isScanning = _scanningFolderIds.contains(folder.folderid);
+                final isAvailable = Directory(folder.absolutepath).existsSync();
+
+                return Card(
+                  child: ListTile(
+                    leading: Icon(
+                      isAvailable ? Icons.folder : Icons.folder_off,
+                      color: isAvailable
+                          ? Theme.of(context).colorScheme.primary
+                          : Colors.grey,
+                    ),
+                    title: Text(folder.displayname),
+                    subtitle: Text(
+                      '${folder.absolutepath}\n'
+                      '${folder.recursive == 1 ? 'Includes subfolders' : 'This folder only'} • '
+                      'Last scan: ${_formatTimestamp(folder.lastscannedat)}',
+                    ),
+                    isThreeLine: true,
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          tooltip: 'Scan folder',
+                          onPressed: isAvailable && !isScanning
+                              ? () => _scanFolder(folder)
+                              : null,
+                          icon: isScanning
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.refresh),
+                        ),
+                        PopupMenuButton<_FolderAction>(
+                          tooltip: 'Folder actions',
+                          onSelected: (action) {
+                            if (action == _FolderAction.remove) {
+                              _removeFolder(folder);
+                            }
+                          },
+                          itemBuilder: (context) => const [
+                            PopupMenuItem(
+                              value: _FolderAction.remove,
+                              child: Text('Stop watching'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) =>
+              Center(child: Text('Could not load folders: $error')),
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         tooltip: 'Add watched folder',
