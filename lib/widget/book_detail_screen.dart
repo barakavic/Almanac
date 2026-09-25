@@ -1,10 +1,14 @@
 import 'package:bookshelf/data/models/book.dart';
 import 'package:bookshelf/data/models/chapter.dart';
 import 'package:bookshelf/data/models/genre.dart';
+import 'package:bookshelf/data/models/reader_option.dart';
 import 'package:bookshelf/data/providers.dart';
-import 'package:bookshelf/widget/pdf_reader_screen.dart';
+import 'package:bookshelf/services/reader_service.dart';
+import 'package:bookshelf/services/reading_session_detector.dart';
+import 'package:bookshelf/widget/reader_picker_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 class BookDetailScreen extends ConsumerStatefulWidget {
@@ -21,20 +25,234 @@ class BookDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _BookDetailScreenState extends ConsumerState<BookDetailScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
     super.dispose();
   }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _runPostSessionDetection();
+    }
+  }
+
+  Future<void> _saveDetectedPage(int page) async {
+    await ref.read(bookRepositoryProvider).updateBook(widget.book.bookid, page);
+    ref.invalidate(booksProvider);
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Saved reading position at page $page')),
+    );
+  }
+
+  int _estimatedMinutesRemaining() {
+    if (widget.book.totalpages <= 0 || widget.book.lastpageread <= 0) {
+      return 10;
+    }
+
+    final remainingPages = (widget.book.totalpages - widget.book.lastpageread).clamp(1, widget.book.totalpages);
+    return ((remainingPages / 10).ceil()).clamp(1, 60);
+  }
+
+  Future<void> _openBookWithPreferredReader() async {
+    final prefs = await SharedPreferences.getInstance();
+    final defaultReader = prefs.getString('default_reader') ?? 'always_ask';
+
+    if (!mounted) return;
+
+    if (defaultReader == 'always_ask') {
+      await showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        useRootNavigator: true,
+        builder: (_) => ReaderPickerSheet(book: widget.book),
+      );
+      return;
+    }
+
+    final selectedReader = ReaderOption.all.firstWhere(
+      (reader) => reader.id == defaultReader,
+      orElse: () => ReaderOption.all.first,
+    );
+
+    if (!mounted) return;
+
+    await ReaderService.openWith(selectedReader, widget.book, context);
+  }
+
+  Future<void> _runPostSessionDetection() async {
+    final detectedPage = await ReadingSessionDetector().detect(widget.book);
+
+    if (!mounted) return;
+
+    if (detectedPage == null) {
+      final estimatedMinutes = _estimatedMinutesRemaining();
+      await showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        useRootNavigator: true,
+        builder: (sheetContext) {
+          return Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Reading session update',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'We could not detect a new page after your last external reader session. '
+                  'Estimated time remaining: about $estimatedMinutes minutes.',
+                ),
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => Navigator.of(sheetContext).pop(),
+                    child: const Text('Close'),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+      return;
+    }
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useRootNavigator: true,
+      builder: (sheetContext) {
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Detected reading position',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'We detected page $detectedPage from your last session. Save it?',
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: () async {
+                        Navigator.of(sheetContext).pop();
+                        await _saveDetectedPage(detectedPage);
+                      },
+                      icon: const Icon(Icons.save),
+                      label: const Text('Save'),
+                    ),
+                  ),
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: () async {
+                        Navigator.of(sheetContext).pop();
+
+                        final controller = TextEditingController(
+                          text: detectedPage.toString(),
+                        );
+                        final updatedPage = await showDialog<int>(
+                          context: context,
+                          builder: (dialogContext) {
+                            return AlertDialog(
+                              title: const Text('Edit reading page'),
+                              content: TextField(
+                                controller: controller,
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(labelText: 'Page number'),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(dialogContext).pop(),
+                                  child: const Text('Cancel'),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    final parsed = int.tryParse(controller.text);
+                                    if (parsed == null || parsed < 1) {
+                                      return;
+                                    }
+                                    Navigator.of(dialogContext).pop(parsed);
+                                  },
+                                  child: const Text('Save'),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+
+                        if (updatedPage != null) {
+                          await _saveDetectedPage(updatedPage);
+                        }
+                      },
+                      icon: const Icon(Icons.edit),
+                      label: const Text('Edit'),
+                    ),
+                  ),
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                      icon: const Icon(Icons.close),
+                      label: const Text('Ignore'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  void didChangeAccessibilityFeatures() {}
+
+  @override
+  void didChangeLocales(List<Locale>? locales) {}
+
+  @override
+  void didChangeMetrics() {}
+
+  @override
+  void didChangePlatformBrightness() {}
+
+  @override
+  void didChangeTextScaleFactor() {}
+
+  @override
+  void didHaveMemoryPressure() {}
 
   double _calculateChapterProgress(Chapter chapter, int lastPageRead) {
     if (lastPageRead >= chapter.chapterendpagenumber) return 1.0;
@@ -364,14 +582,7 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen>
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => PdfReaderScreen(book: widget.book),
-                          ),
-                        );
-                      },
+                      onPressed: _openBookWithPreferredReader,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: containerColor,
                         foregroundColor: Colors.white,

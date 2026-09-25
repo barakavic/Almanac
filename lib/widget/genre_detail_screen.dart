@@ -35,20 +35,21 @@ class _GenreDetailScreenState extends ConsumerState<GenreDetailScreen>{
 
   Future<void> _importBookIntoGenre() async{
     try{
-      final result = await FilePicker.pickFiles(
+      final files = await FilePicker.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['pdf']
+        allowedExtensions: ['pdf'],
       );
-      if (result == null){
+      if (files == null || files.isEmpty) {
         appLogger.w('User canceled the file picker');
         return;
-
       }
-      final sourcePath = result.files.single.path!;
+
+      final file = files.single;
+      final sourcePath = file.path!;
 
       final appDir = await getApplicationDocumentsDirectory();
 
-      final fileName = result.files.single.name;
+      final fileName = file.name;
 
       final destinationPath = '${appDir.path}/$fileName';
 

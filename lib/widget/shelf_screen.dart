@@ -184,36 +184,39 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen> {
 
   Future<void> _importBook() async {
     try {
-      final result = await FilePicker.pickFiles(
+      final files = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'epub'],
       );
 
-      if (result != null && result.files.single.path != null) {
-        final filePath = result.files.single.path!;
-        final fileName = result.files.single.name;
+      if (files != null && files.isNotEmpty) {
+        final file = files.single;
+        if (file.path != null) {
+          final filePath = file.path!;
+          final fileName = file.name;
 
-        final metadata = await BookFileMetadata.fromPath(filePath);
+          final metadata = await BookFileMetadata.fromPath(filePath);
 
-        final newBook = Book(
-          bookid: const Uuid().v4(),
-          title: fileName.replaceAll(RegExp(r'\.(pdf|epub)$', caseSensitive: false), ''),
-          author: 'Unknown Author',
-          filepath: filePath,
-          spinecolor: Colors.primaries[DateTime.now().second % Colors.primaries.length].value,
-          lastpageread: 0,
-          totalpages: 0,
-          isarchived: false,
-          addedat: DateTime.now(),
-          sha256: metadata.sha256,
-          filesizebytes: metadata.fileSizeBytes,
-        );
+          final newBook = Book(
+            bookid: const Uuid().v4(),
+            title: fileName.replaceAll(RegExp(r'\.(pdf|epub)$', caseSensitive: false), ''),
+            author: 'Unknown Author',
+            filepath: filePath,
+            spinecolor: Colors.primaries[DateTime.now().second % Colors.primaries.length].value,
+            lastpageread: 0,
+            totalpages: 0,
+            isarchived: false,
+            addedat: DateTime.now(),
+            sha256: metadata.sha256,
+            filesizebytes: metadata.fileSizeBytes,
+          );
 
-        showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          builder: (context) => const ImportGenrePickerSheet(),
-        );
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            builder: (context) => const ImportGenrePickerSheet(),
+          );
+        }
       }
     } catch (e, st) {
       appLogger.e('Failed to import book', error: e, stackTrace: st);
