@@ -52,7 +52,7 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen> {
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (Platform.isLinux) return;
+      if (Platform.isLinux || Platform.isWindows) return;
 
       ShareHandlerPlatform.instance.getInitialSharedMedia().then((media) {
         if (media?.attachments?.isNotEmpty == true) {
