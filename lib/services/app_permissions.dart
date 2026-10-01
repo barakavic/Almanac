@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:permission_handler/permission_handler.dart';
 
 class AppPermissions {
   static Future<Map<Permission, PermissionStatus>> requestInitialPermissions() async {
+    if (Platform.isLinux) return {};
+
     final permissions = <Permission>[];
 
     permissions.add(Permission.camera);
@@ -21,6 +25,8 @@ class AppPermissions {
   }
 
   static Future<PermissionStatus> ensureCameraPermission() async {
+    if (Platform.isLinux) return PermissionStatus.denied;
+
     final status = await Permission.camera.status;
     if (status.isGranted || status.isLimited) {
       return status;
@@ -30,6 +36,8 @@ class AppPermissions {
   }
 
   static Future<PermissionStatus> ensureStoragePermission() async {
+    if (Platform.isLinux) return PermissionStatus.denied;
+
     final status = await Permission.storage.status;
     if (status.isGranted || status.isLimited) {
       return status;

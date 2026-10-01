@@ -52,6 +52,8 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen> {
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (Platform.isLinux) return;
+
       ShareHandlerPlatform.instance.getInitialSharedMedia().then((media) {
         if (media?.attachments?.isNotEmpty == true) {
           final path = media?.attachments?.first?.path;
@@ -78,6 +80,8 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen> {
   }
 
   Future<void> _initAppLinks() async {
+    if (Platform.isLinux) return;
+
     _appLinks = AppLinks();
 
     try {
