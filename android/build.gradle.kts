@@ -16,10 +16,9 @@ subprojects {
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
 subprojects {
-    
-    afterEvaluate {
-        project.extensions.findByType<com.android.build.gradle.LibraryExtension>()?.apply {
-            if (namespace == null || namespace!!.isEmpty()) {
+    project.plugins.withId("com.android.library") {
+        project.extensions.configure<com.android.build.gradle.LibraryExtension> {
+            if (namespace.isNullOrEmpty()) {
                 namespace = "com.example.${project.name.replace("-", "_")}"
             }
         }
