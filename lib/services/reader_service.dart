@@ -102,7 +102,7 @@ Future<List<ReaderOption>> listAvailableReaders() async{
 Future<List<ReaderOption>> availableReaders() async => listAvailableReaders();
 
 class ReaderService {
-  static final Map<String, StreamSubscription<FileSystemEvent>> _subscriptions = {};
+  static final Map<String, StreamSubscription> _watchers = {};
 
   static Future<List<ReaderOption>> availableReaders() => listAvailableReaders();
 
@@ -142,22 +142,22 @@ class ReaderService {
       }
     });
 
-    _subscriptions[book.bookid] = subscription;
+    _watchers[book.bookid] = subscription;
   }
 
   static Future<void> stopWatching(String bookId) async {
-    final sub = _subscriptions.remove(bookId);
-    await sub?.cancel();
+    final subscription = _watchers.remove(bookId);
+    await subscription?.cancel();
   }
 
   static Future<void> stopAllWatching() async {
-    for (final sub in _subscriptions.values) {
-      await sub.cancel();
+    for (final subscription in _watchers.values) {
+      await subscription.cancel();
     }
-    _subscriptions.clear();
+    _watchers.clear();
   }
 
-  static bool isWatching(String bookId) => _subscriptions.containsKey(bookId);
+  static bool isWatching(String bookId) => _watchers.containsKey(bookId);
 }
 
 Future<void> launchReaderWith(ReaderOption reader, Book book, BuildContext context) async{
