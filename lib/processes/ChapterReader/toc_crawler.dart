@@ -7,7 +7,7 @@ import 'package:uuid/uuid.dart';
 
 /// Finds and parses a table of contents near the start of a PDF.
 class TOCCrawler {
-  static const int maxPagesToScan = 15;
+  static const int maxPagesToScan = 100;
 
   static final RegExp _tocHeading = RegExp(
     r'^\s*(?:table\s+of\s+contents|contents|toc)\b',
@@ -25,19 +25,19 @@ class TOCCrawler {
     final bytes = await File(filepath).readAsBytes();
     final document = PdfDocument(inputBytes: bytes);
     try {
-      return crawlFromDocument(document, bookid, document.pages.count);
+      return await crawlFromDocument(document, bookid, document.pages.count);
     } finally {
       document.dispose();
     }
   }
 
   /// Reuses an already-open PDF document to avoid an extra read and parse.
-  static List<Chapter> crawlFromDocument(
+  static Future<List<Chapter>> crawlFromDocument(
     PdfDocument document,
     String bookid,
     int totalPages,
-  ) {
-    final tocPage = findTOCPage(document, totalPages);
+  ) async {
+    final tocPage = await findTOCPage(document, totalPages);
     if (tocPage == null) return [];
 
     final text = PdfTextExtractor(
@@ -47,7 +47,10 @@ class TOCCrawler {
   }
 
   /// Returns the zero-based index of the first likely TOC page.
-  static int? findTOCPage(PdfDocument document, [int? totalPages]) {
+  static Future<int?> findTOCPage(
+    PdfDocument document, [
+    int? totalPages,
+  ]) async {
     final pageCount = document.pages.count;
     final scanLimit = (totalPages ?? pageCount).clamp(0, pageCount);
     final extractor = PdfTextExtractor(document);
@@ -57,6 +60,9 @@ class TOCCrawler {
       pageIndex < scanLimit && pageIndex < maxPagesToScan;
       pageIndex++
     ) {
+      if (pageIndex > 0 && pageIndex % 5 == 0) {
+        await Future<void>.delayed(Duration.zero);
+      }
       try {
         final text = extractor.extractText(
           startPageIndex: pageIndex,

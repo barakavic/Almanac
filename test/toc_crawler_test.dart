@@ -58,7 +58,7 @@ Chapter 1: A longer Introduction ..... 5''',
     });
   });
 
-  test('finds and crawls a TOC from an already-open document', () {
+  test('finds and crawls a TOC from an already-open document', () async {
     final generated = PdfDocument();
     generated.pages.add().graphics.drawString(
       'TABLE OF CONTENTS\nChapter 1: Start ........ 2\nChapter 2: Finish ....... 4',
@@ -73,8 +73,8 @@ Chapter 1: A longer Introduction ..... 5''',
 
     final loaded = PdfDocument(inputBytes: bytes);
     try {
-      expect(TOCCrawler.findTOCPage(loaded), 0);
-      final chapters = TOCCrawler.crawlFromDocument(loaded, 'book-3', 4);
+      expect(await TOCCrawler.findTOCPage(loaded), 0);
+      final chapters = await TOCCrawler.crawlFromDocument(loaded, 'book-3', 4);
       expect(chapters.map((chapter) => chapter.title), [
         'Chapter 1: Start',
         'Chapter 2: Finish',
@@ -106,6 +106,33 @@ Chapter 1: A longer Introduction ..... 5''',
       expect(chapters.single.chapterendpagenumber, 1);
     } finally {
       await tempDirectory.delete(recursive: true);
+    }
+  });
+
+  test('finds a TOC after a long preface', () async {
+    final generated = PdfDocument();
+    for (var page = 0; page < 18; page++) {
+      generated.pages.add();
+    }
+    generated.pages.add().graphics.drawString(
+      'TABLE OF CONTENTS\nChapter 1: Late TOC ........ 10',
+      PdfStandardFont(PdfFontFamily.helvetica, 12),
+      bounds: const Rect.fromLTWH(20, 20, 500, 100),
+    );
+    final bytes = generated.saveSync();
+    generated.dispose();
+
+    final loaded = PdfDocument(inputBytes: bytes);
+    try {
+      expect(await TOCCrawler.findTOCPage(loaded), 18);
+      final chapters = await TOCCrawler.crawlFromDocument(
+        loaded,
+        'book-preface',
+        loaded.pages.count,
+      );
+      expect(chapters.single.title, 'Chapter 1: Late TOC');
+    } finally {
+      loaded.dispose();
     }
   });
 }

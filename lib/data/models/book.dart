@@ -1,4 +1,3 @@
-
 import 'package:bookshelf/utils/app_logger.dart';
 
 class Book {
@@ -19,6 +18,7 @@ class Book {
   final DateTime? lastopenedat;
   final String? sha256;
   final int? filesizebytes;
+  final int isindexed;
 
   const Book({
     required this.bookid,
@@ -38,6 +38,7 @@ class Book {
     this.lastopenedat,
     this.sha256,
     this.filesizebytes,
+    this.isindexed = 0,
   });
 
   Map<String, dynamic> toMap() {
@@ -59,6 +60,7 @@ class Book {
       'lastopenedat': lastopenedat?.toIso8601String(),
       'sha256': sha256,
       'filesizebytes': filesizebytes,
+      'isindexed': isindexed,
     };
   }
 
@@ -80,9 +82,12 @@ class Book {
         isremote: map['isremote'] == 1,
         remotedeviceid: map['remotedeviceid'],
         deviceid: map['deviceid'],
-        lastopenedat: lastOpenedAt == null ? null : DateTime.parse(lastOpenedAt),
+        lastopenedat: lastOpenedAt == null
+            ? null
+            : DateTime.parse(lastOpenedAt),
         sha256: map['sha256'],
         filesizebytes: map['filesizebytes'] as int?,
+        isindexed: map['isindexed'] as int? ?? 0,
       );
     } catch (e, st) {
       appLogger.e('failed to parse Book. Map $map', error: e, stackTrace: st);

@@ -1,14 +1,19 @@
+import 'dart:io';
+
 import 'package:bookshelf/data/models/book.dart';
 import 'package:bookshelf/data/models/chapter.dart';
 import 'package:bookshelf/data/models/genre.dart';
 import 'package:bookshelf/data/models/reader_option.dart';
 import 'package:bookshelf/data/providers.dart';
+import 'package:bookshelf/processes/ChapterReader/chapter_extractor.dart';
 import 'package:bookshelf/services/reader_service.dart';
 import 'package:bookshelf/services/reading_session_detector.dart';
+import 'package:bookshelf/utils/app_logger.dart';
 import 'package:bookshelf/widget/reader_picker_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:syncfusion_flutter_pdf/pdf.dart';
 import 'package:uuid/uuid.dart';
 
 class BookDetailScreen extends ConsumerStatefulWidget {
@@ -23,12 +28,17 @@ class BookDetailScreen extends ConsumerStatefulWidget {
 class _BookDetailScreenState extends ConsumerState<BookDetailScreen>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late TabController _tabController;
+  bool _isIndexingBook = false;
+  String? _indexingError;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(length: 3, vsync: this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _ensurePdfMetadataAndChapters();
+    });
   }
 
   @override
@@ -41,7 +51,69 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      ref.invalidate(booksProvider);
+      ref.invalidate(chaptersByBookProvider(widget.book.bookid));
       _runPostSessionDetection();
+    }
+  }
+
+  Future<void> _ensurePdfMetadataAndChapters({bool retry = false}) async {
+    final filepath = widget.book.filepath;
+    if (_isIndexingBook ||
+        filepath == null ||
+        !filepath.toLowerCase().endsWith('.pdf')) {
+      return;
+    }
+
+    setState(() {
+      _isIndexingBook = true;
+      _indexingError = null;
+    });
+
+    PdfDocument? document;
+    try {
+      final repository = ref.read(bookRepositoryProvider);
+      final latestBook = await repository.getBookById(widget.book.bookid);
+      if (latestBook == null) return;
+
+      final shouldIndexChapters = retry || latestBook.isindexed == 0;
+      if (latestBook.totalpages > 0 && !shouldIndexChapters) return;
+
+      final bytes = await File(filepath).readAsBytes();
+      document = PdfDocument(inputBytes: bytes);
+      final totalPages = document.pages.count;
+
+      if (latestBook.totalpages != totalPages) {
+        await repository.updateBookTotalPages(widget.book.bookid, totalPages);
+        ref.invalidate(booksProvider);
+      }
+
+      if (shouldIndexChapters) {
+        await ChapterExtractor.extract(
+          ref: ref,
+          document: document,
+          bookId: widget.book.bookid,
+          totalPages: totalPages,
+        );
+        ref.invalidate(chaptersByBookProvider(widget.book.bookid));
+      }
+
+      await ref.read(booksProvider.future);
+      await ref.read(chaptersByBookProvider(widget.book.bookid).future);
+    } catch (e, st) {
+      appLogger.e(
+        'Failed to inspect PDF from book details',
+        error: e,
+        stackTrace: st,
+      );
+      if (mounted) {
+        setState(() => _indexingError = 'Could not scan this PDF.');
+      }
+    } finally {
+      document?.dispose();
+      if (mounted) {
+        setState(() => _isIndexingBook = false);
+      }
     }
   }
 
@@ -659,6 +731,40 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen>
                     'Page ${book.lastpageread} of ${book.totalpages}',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
+                  if (_isIndexingBook) ...[
+                    const SizedBox(height: 8),
+                    const Row(
+                      children: [
+                        SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text('Checking PDF pages and chapters…'),
+                        ),
+                      ],
+                    ),
+                  ] else if (_indexingError != null || book.isindexed == 2) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _indexingError ?? 'No chapters were detected.',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                        TextButton.icon(
+                          onPressed: () =>
+                              _ensurePdfMetadataAndChapters(retry: true),
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Scan again'),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,

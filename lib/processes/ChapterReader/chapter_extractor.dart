@@ -20,6 +20,7 @@ class ChapterExtractor {
       final bookRepository = ref.read(bookRepositoryProvider);
       if (existing.isNotEmpty) {
         await bookRepository.markBookIndexed(bookId, 1);
+        ref.invalidate(booksProvider);
         return;
       }
 
@@ -30,7 +31,11 @@ class ChapterExtractor {
       );
 
       if (chapters.isEmpty) {
-        chapters = TOCCrawler.crawlFromDocument(document, bookId, totalPages);
+        chapters = await TOCCrawler.crawlFromDocument(
+          document,
+          bookId,
+          totalPages,
+        );
       }
 
       if (chapters.isEmpty) {
@@ -40,9 +45,11 @@ class ChapterExtractor {
       if (chapters.isNotEmpty) {
         await repository.addChaptersIfNone(bookId, chapters);
         await bookRepository.markBookIndexed(bookId, 1);
+        ref.invalidate(booksProvider);
         ref.invalidate(chaptersByBookProvider(bookId));
       } else {
         await bookRepository.markBookIndexed(bookId, 2);
+        ref.invalidate(booksProvider);
       }
     } catch (e, st) {
       appLogger.e('Failed to extract chapters', error: e, stackTrace: st);

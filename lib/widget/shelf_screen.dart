@@ -5,7 +5,6 @@ import 'package:app_links/app_links.dart';
 import 'package:bookshelf/data/models/book.dart';
 import 'package:bookshelf/data/models/genre.dart';
 import 'package:bookshelf/data/providers.dart';
-import 'package:bookshelf/processes/ChapterReader/toc_crawler.dart';
 import 'package:bookshelf/services/book_file_metadata.dart';
 import 'package:bookshelf/ui/devices/devices_screen.dart';
 import 'package:bookshelf/utils/app_logger.dart';
@@ -159,7 +158,6 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen> {
       );
 
       await ref.read(bookRepositoryProvider).addBook(newBook);
-      _startBackgroundTocIndexing(newBook);
       ref.invalidate(booksProvider);
 
       if (mounted) {
@@ -171,44 +169,6 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen> {
     } finally {
       _processingPaths.remove(destinationPath);
     }
-  }
-
-  void _startBackgroundTocIndexing(Book book) {
-    final filepath = book.filepath;
-    if (filepath == null || !filepath.toLowerCase().endsWith('.pdf')) return;
-
-    final chapterRepository = ref.read(chaptersRepositoryProvider);
-    final bookRepository = ref.read(bookRepositoryProvider);
-
-    unawaited(() async {
-      try {
-        final existing = await chapterRepository.getChaptersForBook(
-          book.bookid,
-        );
-        if (existing.isNotEmpty) {
-          await bookRepository.markBookIndexed(book.bookid, 1);
-          return;
-        }
-
-        final chapters = await TOCCrawler.crawlTOC(filepath, book.bookid);
-        if (chapters.isEmpty) {
-          await bookRepository.markBookIndexed(book.bookid, 2);
-          return;
-        }
-
-        await chapterRepository.addChaptersIfNone(book.bookid, chapters);
-        await bookRepository.markBookIndexed(book.bookid, 1);
-        if (mounted) {
-          ref.invalidate(chaptersByBookProvider(book.bookid));
-        }
-      } catch (e, st) {
-        appLogger.e(
-          'Background TOC extraction failed',
-          error: e,
-          stackTrace: st,
-        );
-      }
-    }());
   }
 
   void _showBookActions(Book book) {
@@ -284,7 +244,6 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen> {
           if (newBook.genreid != null) {
             ref.invalidate(booksByGenreProvider(newBook.genreid!));
           }
-          _startBackgroundTocIndexing(newBook);
         }
       }
     } catch (e, st) {
