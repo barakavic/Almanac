@@ -5,6 +5,7 @@ import 'package:app_links/app_links.dart';
 import 'package:bookshelf/data/models/book.dart';
 import 'package:bookshelf/data/models/genre.dart';
 import 'package:bookshelf/data/providers.dart';
+import 'package:bookshelf/processes/ChapterReader/toc_crawler.dart';
 import 'package:bookshelf/services/book_file_metadata.dart';
 import 'package:bookshelf/ui/devices/devices_screen.dart';
 import 'package:bookshelf/utils/app_logger.dart';
@@ -61,7 +62,9 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen> {
         }
       });
 
-      _shareSub = ShareHandlerPlatform.instance.sharedMediaStream.listen((media) {
+      _shareSub = ShareHandlerPlatform.instance.sharedMediaStream.listen((
+        media,
+      ) {
         if (media.attachments?.isNotEmpty == true) {
           final path = media.attachments?.first?.path;
           if (path != null) _handleIncomingFile(path);
@@ -123,7 +126,9 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen> {
     _processingPaths.add(destinationPath);
 
     try {
-      final existing = await ref.read(bookRepositoryProvider).getBookByPath(destinationPath);
+      final existing = await ref
+          .read(bookRepositoryProvider)
+          .getBookByPath(destinationPath);
       if (existing != null) {
         if (mounted) {
           Navigator.push(
@@ -142,7 +147,9 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen> {
         title: fileName.replaceAll(RegExp(r'\.pdf$', caseSensitive: false), ''),
         author: 'Unknown Author',
         filepath: destinationPath,
-        spinecolor: Colors.primaries[DateTime.now().second % Colors.primaries.length].value,
+        spinecolor: Colors
+            .primaries[DateTime.now().second % Colors.primaries.length]
+            .value,
         lastpageread: 0,
         totalpages: 0,
         isarchived: false,
@@ -152,6 +159,7 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen> {
       );
 
       await ref.read(bookRepositoryProvider).addBook(newBook);
+      _startBackgroundTocIndexing(newBook);
       ref.invalidate(booksProvider);
 
       if (mounted) {
@@ -165,6 +173,44 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen> {
     }
   }
 
+  void _startBackgroundTocIndexing(Book book) {
+    final filepath = book.filepath;
+    if (filepath == null || !filepath.toLowerCase().endsWith('.pdf')) return;
+
+    final chapterRepository = ref.read(chaptersRepositoryProvider);
+    final bookRepository = ref.read(bookRepositoryProvider);
+
+    unawaited(() async {
+      try {
+        final existing = await chapterRepository.getChaptersForBook(
+          book.bookid,
+        );
+        if (existing.isNotEmpty) {
+          await bookRepository.markBookIndexed(book.bookid, 1);
+          return;
+        }
+
+        final chapters = await TOCCrawler.crawlTOC(filepath, book.bookid);
+        if (chapters.isEmpty) {
+          await bookRepository.markBookIndexed(book.bookid, 2);
+          return;
+        }
+
+        await chapterRepository.addChaptersIfNone(book.bookid, chapters);
+        await bookRepository.markBookIndexed(book.bookid, 1);
+        if (mounted) {
+          ref.invalidate(chaptersByBookProvider(book.bookid));
+        }
+      } catch (e, st) {
+        appLogger.e(
+          'Background TOC extraction failed',
+          error: e,
+          stackTrace: st,
+        );
+      }
+    }());
+  }
+
   void _showBookActions(Book book) {
     showModalBottomSheet(
       context: context,
@@ -175,14 +221,16 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen> {
 
   Future<void> _handleBookDrop(Book book, Genre targetGenre) async {
     try {
-      await ref.read(bookRepositoryProvider).reassignBook(
-            book.bookid,
-            targetGenre.genreid,
-            null,
-          );
+      await ref
+          .read(bookRepositoryProvider)
+          .reassignBook(book.bookid, targetGenre.genreid, null);
       ref.invalidate(booksProvider);
     } catch (e, st) {
-      appLogger.e('Failed to move book to genre via drag and drop', error: e, stackTrace: st);
+      appLogger.e(
+        'Failed to move book to genre via drag and drop',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 
@@ -193,41 +241,58 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen> {
         allowedExtensions: ['pdf', 'epub'],
       );
 
-      if (files != null && files.isNotEmpty) {
+      if (files.isNotEmpty) {
         final file = files.single;
         if (file.path != null) {
           final filePath = file.path!;
           final fileName = file.name;
 
           final metadata = await BookFileMetadata.fromPath(filePath);
+          if (!mounted) return;
 
-          final newBook = Book(
-            bookid: const Uuid().v4(),
-            title: fileName.replaceAll(RegExp(r'\.(pdf|epub)$', caseSensitive: false), ''),
-            author: 'Unknown Author',
-            filepath: filePath,
-            spinecolor: Colors.primaries[DateTime.now().second % Colors.primaries.length].value,
-            lastpageread: 0,
-            totalpages: 0,
-            isarchived: false,
-            addedat: DateTime.now(),
-            sha256: metadata.sha256,
-            filesizebytes: metadata.fileSizeBytes,
-          );
-
-          showModalBottomSheet(
+          final selection = await showModalBottomSheet<Map<String, dynamic>>(
             context: context,
             isScrollControlled: true,
             builder: (context) => const ImportGenrePickerSheet(),
           );
+          if (!mounted) return;
+
+          final newBook = Book(
+            bookid: const Uuid().v4(),
+            title: fileName.replaceAll(
+              RegExp(r'\.(pdf|epub)$', caseSensitive: false),
+              '',
+            ),
+            author: 'Unknown Author',
+            filepath: filePath,
+            spinecolor: Colors
+                .primaries[DateTime.now().second % Colors.primaries.length]
+                .value,
+            lastpageread: 0,
+            totalpages: 0,
+            isarchived: false,
+            addedat: DateTime.now(),
+            genreid: selection?['genreid'] as String?,
+            subgenreid: selection?['subgenreid'] as String?,
+            sha256: metadata.sha256,
+            filesizebytes: metadata.fileSizeBytes,
+          );
+
+          await ref.read(bookRepositoryProvider).addBook(newBook);
+          if (!mounted) return;
+          ref.invalidate(booksProvider);
+          if (newBook.genreid != null) {
+            ref.invalidate(booksByGenreProvider(newBook.genreid!));
+          }
+          _startBackgroundTocIndexing(newBook);
         }
       }
     } catch (e, st) {
       appLogger.e('Failed to import book', error: e, stackTrace: st);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to import book')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Failed to import book')));
       }
     }
   }
@@ -263,10 +328,12 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const GenreManagementScreen()),
+                MaterialPageRoute(
+                  builder: (context) => const GenreManagementScreen(),
+                ),
               );
             },
-          )
+          ),
         ],
       ),
       body: Column(
@@ -278,7 +345,9 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen> {
               error: (err, stack) => Center(child: Text('Error, $err')),
               data: (books) {
                 return genreAsync.when(
-                  loading: () => const Center(child: SpinKitThreeBounce(color: Colors.blue)),
+                  loading: () => const Center(
+                    child: SpinKitThreeBounce(color: Colors.blue),
+                  ),
                   error: (err, stack) => Center(child: Text('Error, $err')),
                   data: (genres) {
                     if (isGridView) {
@@ -301,7 +370,10 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen> {
                         ),
                         if (genres.isEmpty)
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 32,
+                            ),
                             child: Column(
                               children: [
                                 const Icon(
@@ -323,7 +395,8 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen> {
                                   onPressed: () => Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => const GenreManagementScreen(),
+                                      builder: (context) =>
+                                          const GenreManagementScreen(),
                                     ),
                                   ),
                                   label: const Text(
@@ -335,13 +408,15 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen> {
                             ),
                           )
                         else
-                          ...genres.map((genre) => GenreBooksSection(
-                                genre: genre,
-                                genres: genres,
-                                books: books,
-                                onLongPressBook: _showBookActions,
-                                onDropBook: _handleBookDrop,
-                              )),
+                          ...genres.map(
+                            (genre) => GenreBooksSection(
+                              genre: genre,
+                              genres: genres,
+                              books: books,
+                              onLongPressBook: _showBookActions,
+                              onDropBook: _handleBookDrop,
+                            ),
+                          ),
                       ],
                     );
                   },

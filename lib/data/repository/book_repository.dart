@@ -7,60 +7,79 @@ class BookRepository {
   final DbHelper _db;
   BookRepository(this._db);
 
-  Future<void> addBook(Book book) async { 
-    try{
-    final db = await _db.database;
-    await db.insert('books',
-     book.toMap(),
-     conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-    }
-    catch(e,st){
+  Future<void> addBook(Book book) async {
+    try {
+      final db = await _db.database;
+      await db.insert(
+        'books',
+        book.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    } catch (e, st) {
       appLogger.e('Failed to add book', error: e, stackTrace: st);
       rethrow;
     }
-     
+  }
 
-   }
-  Future<List<Book>> getAllBooks() async{ 
-    try{
-    final db = await _db.database;
-    final List<Map<String, dynamic>> rows = await db.query('books');
-    return rows.map((row) => Book.fromMap(row)).toList();
-    }
-    catch(e, st){
+  Future<List<Book>> getAllBooks() async {
+    try {
+      final db = await _db.database;
+      final List<Map<String, dynamic>> rows = await db.query('books');
+      return rows.map((row) => Book.fromMap(row)).toList();
+    } catch (e, st) {
       appLogger.e('Failed to retrieve books', error: e, stackTrace: st);
       rethrow;
     }
   }
-  Future<void> updateBook(String bookid, int page) async{ 
-    try{
-    final db = await _db.database;
-    await db.update('books', 
-    {'lastPageRead': page},
-    where: 'bookId = ?',
-    whereArgs: [bookid]
-    
-    );
-    }
-    catch(e,st){
+
+  Future<void> updateBook(String bookid, int page) async {
+    try {
+      final db = await _db.database;
+      await db.update(
+        'books',
+        {'lastPageRead': page},
+        where: 'bookId = ?',
+        whereArgs: [bookid],
+      );
+    } catch (e, st) {
       appLogger.e('Failed to update book', error: e, stackTrace: st);
       rethrow;
     }
   }
-  Future<void> archiveBook(String bookid) async { 
-    try{final db = await _db.database;
-    await db.update(
-      'books',
-      {'isarchived': 1},
-      where: 'bookid = ?',
-      whereArgs: [bookid],
-    );}
-    catch(e,st){
+
+  Future<void> markBookIndexed(String bookid, int status) async {
+    if (status < 0 || status > 2) {
+      throw ArgumentError.value(status, 'status', 'Must be 0, 1, or 2.');
+    }
+
+    try {
+      final db = await _db.database;
+      await db.update(
+        'books',
+        {'isindexed': status},
+        where: 'bookid = ?',
+        whereArgs: [bookid],
+      );
+    } catch (e, st) {
+      appLogger.e('Failed to mark book indexed', error: e, stackTrace: st);
+      rethrow;
+    }
+  }
+
+  Future<void> archiveBook(String bookid) async {
+    try {
+      final db = await _db.database;
+      await db.update(
+        'books',
+        {'isarchived': 1},
+        where: 'bookid = ?',
+        whereArgs: [bookid],
+      );
+    } catch (e, st) {
       appLogger.e('Failed to archive book', error: e, stackTrace: st);
       rethrow;
     }
-  } 
+  }
 
   Future<void> updateBookTotalPages(String bookid, int totalpages) async {
     final db = await _db.database;
@@ -68,117 +87,111 @@ class BookRepository {
       'books',
       {'totalpages': totalpages},
       where: 'bookid = ?',
-      whereArgs: [bookid]
+      whereArgs: [bookid],
     );
   }
 
   Future<void> deleteBook(String bookid) async {
-    try{
-    final db = await _db.database;
-    await db.delete('books', 
-    where: 'bookid = ?', 
-    whereArgs: [bookid],
-    );
-    }
-    catch(e,st){
+    try {
+      final db = await _db.database;
+      await db.delete('books', where: 'bookid = ?', whereArgs: [bookid]);
+    } catch (e, st) {
       appLogger.e('Failed to delete book', error: e, stackTrace: st);
       rethrow;
     }
   }
 
-  Future<List<Book>> getBooksByGenre(String genreid) async{
-  final db = await _db.database;
-
-  final rows =  await db.query(
-    'books',
-    where: 'genreid = ? AND isarchived = ?',
-    whereArgs: [genreid, 0],
-  );
-  return rows.map((row) => Book.fromMap(row)).toList();
-}
-
-Future<Book?> getBookByPath(String filePath) async{
-  final db = await _db.database;
-
-  final rows = await db.query(
-    'books',
-    where: 'filepath = ?',
-    whereArgs: [filePath],
-    limit: 1
-  );
-
-  if (rows.isEmpty) return null;
-
-  return Book.fromMap(rows.first);
-}
-
-Future<Book?> getBookById(String bookid) async {
-  final db = await _db.database;
-  final rows = await db.query(
-    'books',
-    where: 'bookid = ?',
-    whereArgs: [bookid],
-    limit: 1,
-  );
-  if (rows.isEmpty) return null;
-  return Book.fromMap(rows.first);
-}
-
-Future<Book?> getLocalBookByChecksum(String checksum) async {
-  final db = await _db.database;
-  final rows = await db.query(
-    'books',
-    where: 'sha256 = ? AND isremote = ?',
-    whereArgs: [checksum, 0],
-    limit: 1,
-  );
-
-  if (rows.isEmpty) return null;
-  return Book.fromMap(rows.first);
-}
-
-Future<void> reassignBook(String bookid, String? genreid, String? subgenreid) async{
-  try{
+  Future<List<Book>> getBooksByGenre(String genreid) async {
     final db = await _db.database;
-    await db.update(
+
+    final rows = await db.query(
       'books',
-      {'genreid': genreid,
-       'subgenreid': subgenreid},
-      where: 'bookid = ?',
-      whereArgs: [bookid]
-      
-      );
-
+      where: 'genreid = ? AND isarchived = ?',
+      whereArgs: [genreid, 0],
+    );
+    return rows.map((row) => Book.fromMap(row)).toList();
   }
-  catch(e, st){
-    appLogger.e('Failed to reassign book', error: e, stackTrace: st);
-    rethrow;
 
-  }
-}
-
-Future<int?> getGenreColorByBook(String bookid) async{
-  try{
+  Future<Book?> getBookByPath(String filePath) async {
     final db = await _db.database;
-    final rows  = await db.rawQuery('''
+
+    final rows = await db.query(
+      'books',
+      where: 'filepath = ?',
+      whereArgs: [filePath],
+      limit: 1,
+    );
+
+    if (rows.isEmpty) return null;
+
+    return Book.fromMap(rows.first);
+  }
+
+  Future<Book?> getBookById(String bookid) async {
+    final db = await _db.database;
+    final rows = await db.query(
+      'books',
+      where: 'bookid = ?',
+      whereArgs: [bookid],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return Book.fromMap(rows.first);
+  }
+
+  Future<Book?> getLocalBookByChecksum(String checksum) async {
+    final db = await _db.database;
+    final rows = await db.query(
+      'books',
+      where: 'sha256 = ? AND isremote = ?',
+      whereArgs: [checksum, 0],
+      limit: 1,
+    );
+
+    if (rows.isEmpty) return null;
+    return Book.fromMap(rows.first);
+  }
+
+  Future<void> reassignBook(
+    String bookid,
+    String? genreid,
+    String? subgenreid,
+  ) async {
+    try {
+      final db = await _db.database;
+      await db.update(
+        'books',
+        {'genreid': genreid, 'subgenreid': subgenreid},
+        where: 'bookid = ?',
+        whereArgs: [bookid],
+      );
+    } catch (e, st) {
+      appLogger.e('Failed to reassign book', error: e, stackTrace: st);
+      rethrow;
+    }
+  }
+
+  Future<int?> getGenreColorByBook(String bookid) async {
+    try {
+      final db = await _db.database;
+      final rows = await db.rawQuery(
+        '''
       SELECT genre.genreColor
       FROM books
       INNER JOIN genre ON books.bookid = genre.genreid
       WHERE books.bookid = ? 
       LIMIT 1
 
-''', [bookid]);
+''',
+        [bookid],
+      );
 
-  if (rows.isEmpty) return null;
+      if (rows.isEmpty) return null;
 
-  return rows.first['genreColor'] as int?;
-    
-
+      return rows.first['genreColor'] as int?;
+    } catch (e, st) {
+      appLogger.e('Failed to get color by book', error: e, stackTrace: st);
+      rethrow;
+    }
   }
-  catch(e, st){
-    appLogger.e('Failed to get color by book', error: e, stackTrace: st);
-    rethrow;
-  }
-}
-
 }

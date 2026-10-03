@@ -19,6 +19,27 @@ class Chapter {
     required this.chapterorder,
   });
 
+  Chapter copyWith({
+    String? chapterid,
+    String? bookid,
+    String? title,
+    int? chapterswatchcolor,
+    int? chapterstartpagenumber,
+    int? chapterendpagenumber,
+    int? chapterorder,
+  }) {
+    return Chapter(
+      chapterid: chapterid ?? this.chapterid,
+      bookid: bookid ?? this.bookid,
+      title: title ?? this.title,
+      chapterswatchcolor: chapterswatchcolor ?? this.chapterswatchcolor,
+      chapterstartpagenumber:
+          chapterstartpagenumber ?? this.chapterstartpagenumber,
+      chapterendpagenumber: chapterendpagenumber ?? this.chapterendpagenumber,
+      chapterorder: chapterorder ?? this.chapterorder,
+    );
+  }
+
   int get pagenumber => chapterstartpagenumber;
 
   Map<String, dynamic> toMap() {
@@ -45,7 +66,11 @@ class Chapter {
         chapterorder: map['chapterorder'] ?? 0,
       );
     } catch (e, st) {
-      appLogger.e('Failed to parse Chapter. Map $map', error: e, stackTrace: st);
+      appLogger.e(
+        'Failed to parse Chapter. Map $map',
+        error: e,
+        stackTrace: st,
+      );
       rethrow;
     }
   }

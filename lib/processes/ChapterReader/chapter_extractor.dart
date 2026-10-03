@@ -2,6 +2,7 @@ import 'package:bookshelf/data/models/chapter.dart';
 import 'package:bookshelf/data/providers.dart';
 import 'package:bookshelf/processes/ChapterReader/bookmark_extractor.dart';
 import 'package:bookshelf/processes/ChapterReader/regex_extractor.dart';
+import 'package:bookshelf/processes/ChapterReader/toc_crawler.dart';
 import 'package:bookshelf/utils/app_logger.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
@@ -16,19 +17,32 @@ class ChapterExtractor {
     try {
       final repository = ref.read(chaptersRepositoryProvider);
       final existing = await repository.getChaptersForBook(bookId);
-      if (existing.isNotEmpty) return;
+      final bookRepository = ref.read(bookRepositoryProvider);
+      if (existing.isNotEmpty) {
+        await bookRepository.markBookIndexed(bookId, 1);
+        return;
+      }
 
-      List<Chapter> chapters = BookmarkExtractor.extract(document, bookId, totalPages);
+      List<Chapter> chapters = BookmarkExtractor.extract(
+        document,
+        bookId,
+        totalPages,
+      );
+
+      if (chapters.isEmpty) {
+        chapters = TOCCrawler.crawlFromDocument(document, bookId, totalPages);
+      }
 
       if (chapters.isEmpty) {
         chapters = await RegexExtractor.extract(document, bookId, totalPages);
       }
 
       if (chapters.isNotEmpty) {
-        for (final chapter in chapters) {
-          await repository.addChapter(chapter);
-        }
+        await repository.addChaptersIfNone(bookId, chapters);
+        await bookRepository.markBookIndexed(bookId, 1);
         ref.invalidate(chaptersByBookProvider(bookId));
+      } else {
+        await bookRepository.markBookIndexed(bookId, 2);
       }
     } catch (e, st) {
       appLogger.e('Failed to extract chapters', error: e, stackTrace: st);
