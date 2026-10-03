@@ -1,6 +1,7 @@
 import 'package:bookshelf/data/models/book.dart';
 import 'package:bookshelf/data/models/genre.dart';
 import 'package:bookshelf/data/providers.dart';
+import 'package:bookshelf/widget/book_detail_screen.dart';
 import 'package:bookshelf/widget/pdf_reader_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -47,7 +48,7 @@ class GridViewScreen extends ConsumerWidget{
             onTap: () {
               final genre = genres.where((g) => g.genreid == book.genreid).firstOrNull;
               Navigator.push(context, 
-              MaterialPageRoute(builder: (_) => PdfReaderScreen(book: book, genre: genre )));
+              MaterialPageRoute(builder: (_) => BookDetailScreen(book: book, genre: genre )));
             },
             onLongPress: () => onBookLongPress(book),
 
