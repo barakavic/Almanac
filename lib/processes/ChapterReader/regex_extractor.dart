@@ -11,7 +11,11 @@ class RegexExtractor {
     RegExp(r'^scene\s+\d+', caseSensitive: false),
   ];
 
-  static Future<List<Chapter>> extract(PdfDocument document, String bookId, int totalPages) async {
+  static Future<List<Chapter>> extract(
+    PdfDocument document,
+    String bookId,
+    int totalPages,
+  ) async {
     final tempChapters = <_TempChapter>[];
     final extractor = PdfTextExtractor(document);
 
@@ -44,22 +48,46 @@ class RegexExtractor {
 
     if (tempChapters.isEmpty) return [];
 
-    final chapters = <Chapter>[];
-    for (int i = 0; i < tempChapters.length; i++) {
-      final current = tempChapters[i];
-      final isLast = i == tempChapters.length - 1;
-      final endPage = isLast ? totalPages : tempChapters[i + 1].startPage - 1;
+    final deduplicatedChapters = <_TempChapter>[];
+    for (final chapter in tempChapters) {
+      if (deduplicatedChapters.isNotEmpty &&
+          _normalizeTitle(deduplicatedChapters.last.title) ==
+              _normalizeTitle(chapter.title)) {
+        continue;
+      }
+      deduplicatedChapters.add(chapter);
+    }
 
-      chapters.add(Chapter(
-        chapterid: const Uuid().v4(),
-        bookid: bookId,
-        title: current.title,
-        chapterstartpagenumber: current.startPage,
-        chapterendpagenumber: endPage < current.startPage ? current.startPage : endPage,
-        chapterorder: i + 1,
-      ));
+    final chapters = <Chapter>[];
+    for (int i = 0; i < deduplicatedChapters.length; i++) {
+      final current = deduplicatedChapters[i];
+      final isLast = i == deduplicatedChapters.length - 1;
+      final endPage = isLast
+          ? totalPages
+          : deduplicatedChapters[i + 1].startPage - 1;
+
+      chapters.add(
+        Chapter(
+          chapterid: const Uuid().v4(),
+          bookid: bookId,
+          title: current.title,
+          chapterstartpagenumber: current.startPage,
+          chapterendpagenumber: endPage < current.startPage
+              ? current.startPage
+              : endPage,
+          chapterorder: i + 1,
+        ),
+      );
     }
     return chapters;
+  }
+
+  static String _normalizeTitle(String title) {
+    return title
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), ' ')
+        .trim()
+        .replaceAll(RegExp(r'\s+'), ' ');
   }
 }
 
