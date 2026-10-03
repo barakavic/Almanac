@@ -1,4 +1,5 @@
 import 'package:bookshelf/data/models/book.dart';
+import 'package:bookshelf/widget/book_detail_screen.dart';
 import 'package:bookshelf/widget/pdf_reader_screen.dart';
 import 'package:bookshelf/widget/reassign_book_sheet.dart';
 import 'package:flutter/material.dart';
@@ -20,13 +21,10 @@ class BookActionsSheet extends ConsumerWidget{
             leading: const Icon(Icons.open_in_new),
             title: const Text('Open'),
             onTap: (){
-              Navigator.pop(
-                context
-              );
+              Navigator.pop(context);
               Navigator.push(
                 context, MaterialPageRoute(
-                  builder: 
-                  (_)=> PdfReaderScreen(book: book)),
+                  builder: (_)=> BookDetailScreen(book: book)),
               );
             },
           ),

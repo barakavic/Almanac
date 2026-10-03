@@ -46,12 +46,8 @@ class GridViewScreen extends ConsumerWidget{
             book: book,
             onTap: () {
               final genre = genres.where((g) => g.genreid == book.genreid).firstOrNull;
-
-              if (genre == null) return;
-                            
               Navigator.push(context, 
-              MaterialPageRoute(builder: (_) => 
-              PdfReaderScreen(book: book)));
+              MaterialPageRoute(builder: (_) => PdfReaderScreen(book: book, genre: genre )));
             },
             onLongPress: () => onBookLongPress(book),
 
