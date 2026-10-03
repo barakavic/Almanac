@@ -14,11 +14,7 @@ import 'package:uuid/uuid.dart';
 class BookDetailScreen extends ConsumerStatefulWidget {
   final Book book;
   final Genre? genre;
-  const BookDetailScreen({
-    super.key,
-    required this.book,
-    this.genre,
-  });
+  const BookDetailScreen({super.key, required this.book, this.genre});
 
   @override
   ConsumerState<BookDetailScreen> createState() => _BookDetailScreenState();
@@ -52,6 +48,7 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen>
   Future<void> _saveDetectedPage(int page) async {
     await ref.read(bookRepositoryProvider).updateBook(widget.book.bookid, page);
     ref.invalidate(booksProvider);
+    await ref.read(booksProvider.future);
 
     if (!mounted) return;
 
@@ -60,16 +57,69 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen>
     );
   }
 
-  int _estimatedMinutesRemaining() {
-    if (widget.book.totalpages <= 0 || widget.book.lastpageread <= 0) {
-      return 10;
-    }
+  Future<void> _refreshBookDetails() async {
+    final bookId = widget.book.bookid;
+    ref.invalidate(booksProvider);
+    ref.invalidate(chaptersByBookProvider(bookId));
+    ref.invalidate(genreColorByBookProvider(bookId));
 
-    final remainingPages = (widget.book.totalpages - widget.book.lastpageread).clamp(1, widget.book.totalpages);
-    return ((remainingPages / 10).ceil()).clamp(1, 60);
+    await ref.read(booksProvider.future);
+    await ref.read(chaptersByBookProvider(bookId).future);
+    await ref.read(genreColorByBookProvider(bookId).future);
   }
 
-  Future<void> _openBookWithPreferredReader() async {
+  Future<void> _showEditPageDialog([int? initialPage]) async {
+    final currentPage = ref
+        .read(booksProvider)
+        .valueOrNull
+        ?.firstWhere(
+          (book) => book.bookid == widget.book.bookid,
+          orElse: () => widget.book,
+        )
+        .lastpageread;
+    final controller = TextEditingController(
+      text: initialPage != null
+          ? initialPage.toString()
+          : ((currentPage ?? widget.book.lastpageread) > 0
+                ? (currentPage ?? widget.book.lastpageread).toString()
+                : '1'),
+    );
+    final updatedPage = await showDialog<int>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Edit reading page'),
+          content: TextField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(labelText: 'Page number'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                final parsed = int.tryParse(controller.text);
+                if (parsed == null || parsed < 1) {
+                  return;
+                }
+                Navigator.of(dialogContext).pop(parsed);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (updatedPage != null) {
+      await _saveDetectedPage(updatedPage);
+    }
+  }
+
+  Future<void> _openBookWithPreferredReader(Book book) async {
     final prefs = await SharedPreferences.getInstance();
     final defaultReader = prefs.getString('default_reader') ?? 'always_ask';
 
@@ -80,7 +130,7 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen>
         context: context,
         isScrollControlled: true,
         useRootNavigator: true,
-        builder: (_) => ReaderPickerSheet(book: widget.book),
+        builder: (_) => ReaderPickerSheet(book: book),
       );
       return;
     }
@@ -92,16 +142,32 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen>
 
     if (!mounted) return;
 
-    await ReaderService.openWith(selectedReader, widget.book, context);
+    await ReaderService.openWith(selectedReader, book, context);
   }
 
   Future<void> _runPostSessionDetection() async {
+    final prefs = await SharedPreferences.getInstance();
+    final sessionStartStr = prefs.getString(
+      'session_start_${widget.book.bookid}',
+    );
+
+    if (sessionStartStr == null) return;
+
+    final sessionStart = DateTime.tryParse(sessionStartStr);
+    final elapsedMinutes = sessionStart != null
+        ? DateTime.now().difference(sessionStart).inMinutes
+        : 0;
+    final sessionDurationText = elapsedMinutes < 1
+        ? 'less than a minute'
+        : '$elapsedMinutes ${elapsedMinutes == 1 ? "minute" : "minutes"}';
+
+    await prefs.remove('session_start_${widget.book.bookid}');
+
     final detectedPage = await ReadingSessionDetector().detect(widget.book);
 
     if (!mounted) return;
 
     if (detectedPage == null) {
-      final estimatedMinutes = _estimatedMinutesRemaining();
       await showModalBottomSheet(
         context: context,
         isScrollControlled: true,
@@ -114,23 +180,35 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Reading session update',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  'Reading session ended',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'We could not detect a new page after your last external reader session. '
-                  'Estimated time remaining: about $estimatedMinutes minutes.',
+                  'You read for about $sessionDurationText.'
+                  "We couldnt automatically detect your new page from the external reader",
                 ),
                 const SizedBox(height: 16),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () => Navigator.of(sheetContext).pop(),
-                    child: const Text('Close'),
-                  ),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton.icon(
+                      onPressed: () {
+                        Navigator.of(sheetContext).pop();
+                        _showEditPageDialog();
+                      },
+                      icon: const Icon(Icons.edit),
+                      label: const Text('Update Page'),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton(
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                      child: const Text('Close'),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -153,13 +231,13 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen>
             children: [
               Text(
                 'Detected reading position',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
               Text(
-                'We detected page $detectedPage from your last session. Save it?',
+                'You read for about $sessionDurationText. We detected page $detectedPage from your last session. Save it?',
               ),
               const SizedBox(height: 16),
               Row(
@@ -176,45 +254,9 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen>
                   ),
                   Expanded(
                     child: TextButton.icon(
-                      onPressed: () async {
+                      onPressed: () {
                         Navigator.of(sheetContext).pop();
-
-                        final controller = TextEditingController(
-                          text: detectedPage.toString(),
-                        );
-                        final updatedPage = await showDialog<int>(
-                          context: context,
-                          builder: (dialogContext) {
-                            return AlertDialog(
-                              title: const Text('Edit reading page'),
-                              content: TextField(
-                                controller: controller,
-                                keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(labelText: 'Page number'),
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.of(dialogContext).pop(),
-                                  child: const Text('Cancel'),
-                                ),
-                                TextButton(
-                                  onPressed: () {
-                                    final parsed = int.tryParse(controller.text);
-                                    if (parsed == null || parsed < 1) {
-                                      return;
-                                    }
-                                    Navigator.of(dialogContext).pop(parsed);
-                                  },
-                                  child: const Text('Save'),
-                                ),
-                              ],
-                            );
-                          },
-                        );
-
-                        if (updatedPage != null) {
-                          await _saveDetectedPage(updatedPage);
-                        }
+                        _showEditPageDialog();
                       },
                       icon: const Icon(Icons.edit),
                       label: const Text('Edit'),
@@ -258,30 +300,39 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen>
     if (lastPageRead >= chapter.chapterendpagenumber) return 1.0;
     if (lastPageRead < chapter.chapterstartpagenumber) return 0.0;
 
-    final totalPages = chapter.chapterendpagenumber - chapter.chapterstartpagenumber + 1;
+    final totalPages =
+        chapter.chapterendpagenumber - chapter.chapterstartpagenumber + 1;
     final pagesRead = lastPageRead - chapter.chapterstartpagenumber + 1;
     return (pagesRead / totalPages).clamp(0.0, 1.0);
   }
 
   void _showChapterEditor(List<Chapter> existingChapters) {
     final totalPages = widget.book.totalpages;
-    final colorVal = ref.read(genreColorByBookProvider(widget.book.bookid)).valueOrNull;
-    final containerColor = colorVal != null ? Color(colorVal) : Theme.of(context).colorScheme.primary;
+    final colorVal = ref
+        .read(genreColorByBookProvider(widget.book.bookid))
+        .valueOrNull;
+    final containerColor = colorVal != null
+        ? Color(colorVal)
+        : Theme.of(context).colorScheme.primary;
 
     final list = <_EditableChapter>[];
     if (existingChapters.isEmpty) {
-      list.add(_EditableChapter(
-        title: 'Chapter 1',
-        startPage: 1,
-        endPage: totalPages > 0 ? totalPages : 1,
-      ));
+      list.add(
+        _EditableChapter(
+          title: 'Chapter 1',
+          startPage: 1,
+          endPage: totalPages > 0 ? totalPages : 1,
+        ),
+      );
     } else {
       for (final c in existingChapters) {
-        list.add(_EditableChapter(
-          title: c.title,
-          startPage: c.chapterstartpagenumber,
-          endPage: c.chapterendpagenumber,
-        ));
+        list.add(
+          _EditableChapter(
+            title: c.title,
+            startPage: c.chapterstartpagenumber,
+            endPage: c.chapterendpagenumber,
+          ),
+        );
       }
     }
 
@@ -317,19 +368,22 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen>
                 }
                 if (start < 1 || (totalPages > 0 && start > totalPages)) {
                   setState(() {
-                    error = 'Chapter ${i + 1} start page must be between 1 and $totalPages.';
+                    error =
+                        'Chapter ${i + 1} start page must be between 1 and $totalPages.';
                   });
                   return;
                 }
                 if (end < 1 || (totalPages > 0 && end > totalPages)) {
                   setState(() {
-                    error = 'Chapter ${i + 1} end page must be between 1 and $totalPages.';
+                    error =
+                        'Chapter ${i + 1} end page must be between 1 and $totalPages.';
                   });
                   return;
                 }
                 if (start > end) {
                   setState(() {
-                    error = 'Chapter ${i + 1} start page cannot be greater than end page.';
+                    error =
+                        'Chapter ${i + 1} start page cannot be greater than end page.';
                   });
                   return;
                 }
@@ -359,14 +413,16 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen>
 
               for (int i = 0; i < parsed.length; i++) {
                 final p = parsed[i];
-                await repository.addChapter(Chapter(
-                  chapterid: const Uuid().v4(),
-                  bookid: widget.book.bookid,
-                  title: p.title,
-                  chapterstartpagenumber: p.start,
-                  chapterendpagenumber: p.end,
-                  chapterorder: i + 1,
-                ));
+                await repository.addChapter(
+                  Chapter(
+                    chapterid: const Uuid().v4(),
+                    bookid: widget.book.bookid,
+                    title: p.title,
+                    chapterstartpagenumber: p.start,
+                    chapterendpagenumber: p.end,
+                    chapterorder: i + 1,
+                  ),
+                );
               }
 
               ref.invalidate(chaptersByBookProvider(widget.book.bookid));
@@ -390,8 +446,8 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen>
                       Text(
                         'Edit Chapters',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       IconButton(
                         icon: const Icon(Icons.add),
@@ -399,12 +455,20 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen>
                           setState(() {
                             final nextStart = list.isEmpty
                                 ? 1
-                                : (int.tryParse(list.last.endPageController.text) ?? 0) + 1;
-                            list.add(_EditableChapter(
-                              title: 'Chapter ${list.length + 1}',
-                              startPage: nextStart,
-                              endPage: totalPages > 0 ? totalPages : nextStart,
-                            ));
+                                : (int.tryParse(
+                                            list.last.endPageController.text,
+                                          ) ??
+                                          0) +
+                                      1;
+                            list.add(
+                              _EditableChapter(
+                                title: 'Chapter ${list.length + 1}',
+                                startPage: nextStart,
+                                endPage: totalPages > 0
+                                    ? totalPages
+                                    : nextStart,
+                              ),
+                            );
                           });
                         },
                       ),
@@ -416,7 +480,10 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen>
                       padding: const EdgeInsets.only(bottom: 10),
                       child: Text(
                         error!,
-                        style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ConstrainedBox(
@@ -467,7 +534,10 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen>
                                 ),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.delete, color: Colors.red),
+                                icon: const Icon(
+                                  Icons.delete,
+                                  color: Colors.red,
+                                ),
                                 onPressed: () {
                                   setState(() {
                                     list.removeAt(index).dispose();
@@ -514,8 +584,17 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen>
 
   @override
   Widget build(BuildContext context) {
+    final books = ref.watch(booksProvider).valueOrNull;
+    final book =
+        books?.firstWhere(
+          (candidate) => candidate.bookid == widget.book.bookid,
+          orElse: () => widget.book,
+        ) ??
+        widget.book;
     final chaptersAsync = ref.watch(chaptersByBookProvider(widget.book.bookid));
-    final genreColorAsync = ref.watch(genreColorByBookProvider(widget.book.bookid));
+    final genreColorAsync = ref.watch(
+      genreColorByBookProvider(widget.book.bookid),
+    );
     final containerColor = genreColorAsync.valueOrNull != null
         ? Color(genreColorAsync.valueOrNull!)
         : Theme.of(context).colorScheme.surfaceContainerHighest;
@@ -525,7 +604,7 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen>
       backgroundColor: backgroundColor,
       appBar: AppBar(
         title: Text(
-          widget.book.title,
+          book.title,
           style: Theme.of(context).textTheme.headlineMedium,
         ),
         backgroundColor: containerColor.withOpacity(0.16),
@@ -549,40 +628,42 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          widget.book.title,
+                          book.title,
                           overflow: TextOverflow.ellipsis,
                           maxLines: 2,
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          widget.book.author,
+                          book.author,
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                         const SizedBox(height: 14),
                         LinearProgressIndicator(
-                          value: widget.book.totalpages == 0
+                          value: book.totalpages == 0
                               ? 0.0
-                              : (widget.book.lastpageread / widget.book.totalpages).clamp(0.0, 1.0),
+                              : (book.lastpageread / book.totalpages).clamp(
+                                  0.0,
+                                  1.0,
+                                ),
                           minHeight: 8.0,
                           borderRadius: BorderRadius.circular(12),
-                          color: Color(widget.book.spinecolor),
+                          color: Color(book.spinecolor),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 8.0),
                   Text(
-                    'Page ${widget.book.lastpageread} of ${widget.book.totalpages}',
+                    'Page ${book.lastpageread} of ${book.totalpages}',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: _openBookWithPreferredReader,
+                      onPressed: () => _openBookWithPreferredReader(book),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: containerColor,
                         foregroundColor: Colors.white,
@@ -602,7 +683,7 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen>
               tabs: const [
                 Tab(text: 'Chapters'),
                 Tab(text: 'Summary'),
-                Tab(text: 'Quiz')
+                Tab(text: 'Quiz'),
               ],
               indicatorColor: containerColor,
               labelColor: containerColor,
@@ -615,122 +696,181 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen>
                   chaptersAsync.when(
                     data: (chapters) {
                       if (chapters.isEmpty) {
-                        return Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                        return RefreshIndicator(
+                          onRefresh: _refreshBookDetails,
+                          child: ListView(
+                            physics: const AlwaysScrollableScrollPhysics(),
                             children: [
-                              const Text('No Chapters Detected for This Book'),
-                              const SizedBox(height: 16),
-                              ElevatedButton(
-                                onPressed: () => _showChapterEditor([]),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: containerColor,
-                                  foregroundColor: Colors.white,
+                              SizedBox(
+                                height: 300,
+                                child: Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Text(
+                                        'No Chapters Detected for This Book',
+                                      ),
+                                      const SizedBox(height: 16),
+                                      ElevatedButton(
+                                        onPressed: () => _showChapterEditor([]),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: containerColor,
+                                          foregroundColor: Colors.white,
+                                        ),
+                                        child: const Text(
+                                          'Define Chapters Manually',
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                                child: const Text('Define Chapters Manually'),
                               ),
                             ],
                           ),
                         );
                       }
 
-                      return Column(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  '${chapters.length} Chapters',
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.edit),
-                                  onPressed: () => _showChapterEditor(chapters),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Expanded(
-                            child: ListView.builder(
-                              itemCount: chapters.length,
-                              itemBuilder: (context, index) {
-                                final chapter = chapters[index];
-                                final progress = _calculateChapterProgress(
-                                  chapter,
-                                  widget.book.lastpageread,
-                                );
-                                final isCompleted = progress >= 1.0;
-
-                                return Card(
-                                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(12.0),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                chapter.title,
-                                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                                      fontWeight: FontWeight.bold,
-                                                    ),
-                                              ),
-                                            ),
-                                            if (isCompleted)
-                                              const Icon(Icons.check_circle, color: Colors.green)
-                                            else
-                                              Text(
-                                                'pg. ${chapter.chapterstartpagenumber} - ${chapter.chapterendpagenumber}',
-                                                style: Theme.of(context).textTheme.bodySmall,
-                                              ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 8),
-                                        LinearProgressIndicator(
-                                          value: progress,
-                                          minHeight: 4,
-                                          borderRadius: BorderRadius.circular(4),
-                                          color: Color(widget.book.spinecolor),
-                                          backgroundColor: Color(widget.book.spinecolor).withOpacity(0.2),
-                                        ),
-                                      ],
-                                    ),
+                      return RefreshIndicator(
+                        onRefresh: _refreshBookDetails,
+                        child: Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16.0,
+                                vertical: 4.0,
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    '${chapters.length} Chapters',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.bold),
                                   ),
-                                );
-                              },
+                                  IconButton(
+                                    icon: const Icon(Icons.edit),
+                                    onPressed: () =>
+                                        _showChapterEditor(chapters),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Expanded(
+                              child: ListView.builder(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                itemCount: chapters.length,
+                                itemBuilder: (context, index) {
+                                  final chapter = chapters[index];
+                                  final progress = _calculateChapterProgress(
+                                    chapter,
+                                    book.lastpageread,
+                                  );
+                                  final isCompleted = progress >= 1.0;
+
+                                  return Card(
+                                    margin: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 6,
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(12.0),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  chapter.title,
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .titleMedium
+                                                      ?.copyWith(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                ),
+                                              ),
+                                              if (isCompleted)
+                                                const Icon(
+                                                  Icons.check_circle,
+                                                  color: Colors.green,
+                                                )
+                                              else
+                                                Text(
+                                                  'pg. ${chapter.chapterstartpagenumber} - ${chapter.chapterendpagenumber}',
+                                                  style: Theme.of(
+                                                    context,
+                                                  ).textTheme.bodySmall,
+                                                ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          LinearProgressIndicator(
+                                            value: progress,
+                                            minHeight: 4,
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                            color: Color(book.spinecolor),
+                                            backgroundColor: Color(
+                                              book.spinecolor,
+                                            ).withOpacity(0.2),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    error: (err, stack) => RefreshIndicator(
+                      onRefresh: _refreshBookDetails,
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: [
+                          SizedBox(
+                            height: 300,
+                            child: Center(
+                              child: Text('Error Loading Chapters, $err'),
                             ),
                           ),
                         ],
-                      );
-                    },
-                    error: (err, stack) => Center(
-                      child: Text('Error Loading Chapters, $err'),
+                      ),
                     ),
-                    loading: () => const Center(
-                      child: CircularProgressIndicator(),
-                    ),
-                  ),
-                  const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text('AI summaries coming soon'),
-                      ],
+                    loading: () => RefreshIndicator(
+                      onRefresh: _refreshBookDetails,
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: const [
+                          SizedBox(
+                            height: 300,
+                            child: Center(child: CircularProgressIndicator()),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   const Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text('Quiz mode coming soon')
-                      ],
+                      children: [Text('AI summaries coming soon')],
+                    ),
+                  ),
+                  const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [Text('Quiz mode coming soon')],
                     ),
                   ),
                 ],
@@ -752,9 +892,9 @@ class _EditableChapter {
     required String title,
     required int startPage,
     required int endPage,
-  })  : titleController = TextEditingController(text: title),
-        startPageController = TextEditingController(text: startPage.toString()),
-        endPageController = TextEditingController(text: endPage.toString());
+  }) : titleController = TextEditingController(text: title),
+       startPageController = TextEditingController(text: startPage.toString()),
+       endPageController = TextEditingController(text: endPage.toString());
 
   void dispose() {
     titleController.dispose();
@@ -767,9 +907,5 @@ class _ParsedRange {
   final String title;
   final int start;
   final int end;
-  _ParsedRange({
-    required this.title,
-    required this.start,
-    required this.end,
-  });
+  _ParsedRange({required this.title, required this.start, required this.end});
 }
