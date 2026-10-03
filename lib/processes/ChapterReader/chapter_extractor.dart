@@ -13,12 +13,13 @@ class ChapterExtractor {
     required PdfDocument document,
     required String bookId,
     required int totalPages,
+    bool replaceExisting = false,
   }) async {
     try {
       final repository = ref.read(chaptersRepositoryProvider);
       final existing = await repository.getChaptersForBook(bookId);
       final bookRepository = ref.read(bookRepositoryProvider);
-      if (existing.isNotEmpty) {
+      if (existing.isNotEmpty && !replaceExisting) {
         await bookRepository.markBookIndexed(bookId, 1);
         ref.invalidate(booksProvider);
         return;
@@ -43,12 +44,16 @@ class ChapterExtractor {
       }
 
       if (chapters.isNotEmpty) {
-        await repository.addChaptersIfNone(bookId, chapters);
+        if (replaceExisting) {
+          await repository.replaceChaptersForBook(bookId, chapters);
+        } else {
+          await repository.addChaptersIfNone(bookId, chapters);
+        }
         await bookRepository.markBookIndexed(bookId, 1);
         ref.invalidate(booksProvider);
         ref.invalidate(chaptersByBookProvider(bookId));
       } else {
-        await bookRepository.markBookIndexed(bookId, 2);
+        await bookRepository.markBookIndexed(bookId, existing.isEmpty ? 2 : 1);
         ref.invalidate(booksProvider);
       }
     } catch (e, st) {

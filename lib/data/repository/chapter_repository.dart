@@ -51,6 +51,36 @@ class ChapterRepository {
     }
   }
 
+  Future<void> replaceChaptersForBook(
+    String bookid,
+    List<Chapter> chapters,
+  ) async {
+    try {
+      final db = await _db.database;
+      await db.transaction((transaction) async {
+        await transaction.delete(
+          'chapters',
+          where: 'bookid = ?',
+          whereArgs: [bookid],
+        );
+        for (final chapter in chapters) {
+          await transaction.insert(
+            'chapters',
+            chapter.toMap(),
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
+      });
+    } catch (e, st) {
+      appLogger.e(
+        'Failed to replace chapters for book',
+        error: e,
+        stackTrace: st,
+      );
+      rethrow;
+    }
+  }
+
   Future<List<Chapter>> getChaptersForBook(String bookid) async {
     try {
       final db = await _db.database;

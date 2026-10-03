@@ -135,4 +135,52 @@ Chapter 1: A longer Introduction ..... 5''',
       loaded.dispose();
     }
   });
+
+  test('combines chapter entries from consecutive Contents pages', () async {
+    final generated = PdfDocument();
+    generated.pages.add().graphics.drawString(
+      'Brief Contents\nChapter 1: Introduction ........ 4\n'
+      'Chapter 2: Robot Design .......... 18',
+      PdfStandardFont(PdfFontFamily.helvetica, 12),
+      bounds: const Rect.fromLTWH(20, 20, 500, 160),
+    );
+    generated.pages.add().graphics.drawString(
+      'Contents\nChapter 3: Construction ........ 42\n'
+      'Chapter 4: Conclusion ............ 89',
+      PdfStandardFont(PdfFontFamily.helvetica, 12),
+      bounds: const Rect.fromLTWH(20, 20, 500, 160),
+    );
+    final bytes = generated.saveSync();
+    generated.dispose();
+
+    final loaded = PdfDocument(inputBytes: bytes);
+    try {
+      final chapters = await TOCCrawler.crawlFromDocument(
+        loaded,
+        'book-multipage-toc',
+        100,
+      );
+
+      expect(chapters.map((chapter) => chapter.title), [
+        'Chapter 1: Introduction',
+        'Chapter 2: Robot Design',
+        'Chapter 3: Construction',
+        'Chapter 4: Conclusion',
+      ]);
+      expect(chapters.map((chapter) => chapter.chapterstartpagenumber), [
+        4,
+        18,
+        42,
+        89,
+      ]);
+      expect(chapters.map((chapter) => chapter.chapterendpagenumber), [
+        17,
+        41,
+        88,
+        100,
+      ]);
+    } finally {
+      loaded.dispose();
+    }
+  });
 }

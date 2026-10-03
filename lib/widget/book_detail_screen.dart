@@ -57,7 +57,10 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen>
     }
   }
 
-  Future<void> _ensurePdfMetadataAndChapters({bool retry = false}) async {
+  Future<void> _ensurePdfMetadataAndChapters({
+    bool retry = false,
+    bool replaceExisting = false,
+  }) async {
     final filepath = widget.book.filepath;
     if (_isIndexingBook ||
         filepath == null ||
@@ -94,6 +97,7 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen>
           document: document,
           bookId: widget.book.bookid,
           totalPages: totalPages,
+          replaceExisting: replaceExisting,
         );
         ref.invalidate(chaptersByBookProvider(widget.book.bookid));
       }
@@ -114,6 +118,34 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen>
       if (mounted) {
         setState(() => _isIndexingBook = false);
       }
+    }
+  }
+
+  Future<void> _confirmAndRescanChapters() async {
+    final shouldReplace = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Rescan chapters?'),
+        content: const Text(
+          'This scans the PDF again and replaces the current chapter list if '
+          'new chapters are found. Any manually defined chapters in this list '
+          'will also be replaced.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Rescan'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldReplace == true && mounted) {
+      await _ensurePdfMetadataAndChapters(retry: true, replaceExisting: true);
     }
   }
 
@@ -855,6 +887,13 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen>
                                         .textTheme
                                         .titleMedium
                                         ?.copyWith(fontWeight: FontWeight.bold),
+                                  ),
+                                  IconButton(
+                                    tooltip: 'Rescan chapters from PDF',
+                                    icon: const Icon(Icons.refresh),
+                                    onPressed: _isIndexingBook
+                                        ? null
+                                        : _confirmAndRescanChapters,
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.edit),

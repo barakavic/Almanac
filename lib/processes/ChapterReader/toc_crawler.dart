@@ -8,15 +8,20 @@ import 'package:uuid/uuid.dart';
 /// Finds and parses a table of contents near the start of a PDF.
 class TOCCrawler {
   static const int maxPagesToScan = 100;
+  static const int maxTOCPagesToRead = 20;
 
   static final RegExp _tocHeading = RegExp(
-    r'^\s*(?:table\s+of\s+contents|contents|toc)\b',
+    r'^\s*(?:table\s+of\s+contents|brief\s+contents|contents|toc)\b',
     caseSensitive: false,
     multiLine: true,
   );
 
   static final RegExp _entryLine = RegExp(
-    r'^(.*?)\s*(?:\.{2,}|…+|[-–—]{2,}|\s{2,})\s*(\d+|[ivxlcdm]+)\s*$',
+    r'^(.*?)\s*(?:[.·•…]{2,}|[-–—]{2,}|[ \t]{2,})\s*(\d+|[ivxlcdm]+)\s*$',
+    caseSensitive: false,
+  );
+  static final RegExp _looseEntryLine = RegExp(
+    r'^(.{4,}?)\s+(\d+|[ivxlcdm]+)\s*$',
     caseSensitive: false,
   );
 
@@ -40,10 +45,46 @@ class TOCCrawler {
     final tocPage = await findTOCPage(document, totalPages);
     if (tocPage == null) return [];
 
-    final text = PdfTextExtractor(
-      document,
-    ).extractText(startPageIndex: tocPage, endPageIndex: tocPage);
-    return parseTOCText(text, bookid, totalPages);
+    final pageTexts = <String>[];
+    final extractor = PdfTextExtractor(document);
+    var emptyPagesAfterEntries = 0;
+    var foundEntry = false;
+    final lastPage = (tocPage + maxTOCPagesToRead)
+        .clamp(0, totalPages)
+        .clamp(0, maxPagesToScan);
+
+    for (var pageIndex = tocPage; pageIndex < lastPage; pageIndex++) {
+      if (pageIndex > tocPage && (pageIndex - tocPage) % 5 == 0) {
+        await Future<void>.delayed(Duration.zero);
+      }
+
+      String pageText;
+      try {
+        pageText = extractor.extractText(
+          startPageIndex: pageIndex,
+          endPageIndex: pageIndex,
+          layoutText: true,
+        );
+      } catch (_) {
+        if (foundEntry && ++emptyPagesAfterEntries >= 2) break;
+        continue;
+      }
+
+      final pageEntries = _parseEntries(pageText, totalPages);
+      if (pageEntries.isNotEmpty) {
+        foundEntry = true;
+        emptyPagesAfterEntries = 0;
+        pageTexts.add(pageText);
+      } else if (foundEntry) {
+        emptyPagesAfterEntries++;
+        if (emptyPagesAfterEntries >= 2) break;
+      } else {
+        // The heading page may have only a heading or a short introduction.
+        pageTexts.add(pageText);
+      }
+    }
+
+    return parseTOCText(pageTexts.join('\n'), bookid, totalPages);
   }
 
   /// Returns the zero-based index of the first likely TOC page.
@@ -84,25 +125,10 @@ class TOCCrawler {
     int totalPages,
   ) {
     final chaptersByPage = <int, String>{};
-    final normalizedText = text
-        .replaceAll('\r\n', '\n')
-        .replaceAll('\r', '\n')
-        .replaceAll('\u00a0', ' ');
-
-    for (final rawLine in normalizedText.split('\n')) {
-      final line = rawLine.trim();
-      if (line.isEmpty || _tocHeading.hasMatch(line)) continue;
-
-      final match = _entryLine.firstMatch(line);
-      if (match == null) continue;
-
-      final title = _cleanTitle(match.group(1) ?? '');
-      final startPage = _parsePageNumber(match.group(2) ?? '');
-      if (title.length <= 3 || startPage == null || startPage <= 0) continue;
-
-      final existingTitle = chaptersByPage[startPage];
-      if (existingTitle == null || title.length > existingTitle.length) {
-        chaptersByPage[startPage] = title;
+    for (final entry in _parseEntries(text, totalPages)) {
+      final existingTitle = chaptersByPage[entry.page];
+      if (existingTitle == null || entry.title.length > existingTitle.length) {
+        chaptersByPage[entry.page] = entry.title;
       }
     }
 
@@ -125,6 +151,34 @@ class TOCCrawler {
     }
 
     return fillEndPages(chapters, totalPages);
+  }
+
+  static List<({String title, int page})> _parseEntries(
+    String text,
+    int totalPages,
+  ) {
+    final entries = <({String title, int page})>[];
+    for (final rawLine
+        in text
+            .replaceAll('\r\n', '\n')
+            .replaceAll('\r', '\n')
+            .replaceAll('\u00a0', ' ')
+            .split('\n')) {
+      final line = rawLine.trim();
+      if (line.isEmpty || _tocHeading.hasMatch(line)) continue;
+
+      final match =
+          _entryLine.firstMatch(line) ?? _looseEntryLine.firstMatch(line);
+      if (match == null) continue;
+
+      final title = _cleanTitle(match.group(1) ?? '');
+      final page = _parsePageNumber(match.group(2) ?? '');
+      if (title.length <= 3 || page == null || page <= 0 || page > totalPages) {
+        continue;
+      }
+      entries.add((title: title, page: page));
+    }
+    return entries;
   }
 
   /// Calculates each chapter's inclusive end page from the next chapter start.
