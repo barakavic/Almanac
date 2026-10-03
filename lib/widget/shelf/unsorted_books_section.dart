@@ -56,15 +56,8 @@ class UnsortedBooksSection extends StatelessWidget {
                     child: BookSpine(
                     book: book,
                     onTap: () {
-                      final genre = 
-                      genres.where(
-                        (g) => g.genreid == book.genreid).
-                        firstOrNull;
-                      if(genre == null) return;
-                      Navigator.push(
-                        context,
-
-                        MaterialPageRoute(builder: (_) => BookDetailScreen(book: book, genre: genre)),
+                    Navigator.push(
+                        context, MaterialPageRoute(builder: (_) => BookDetailScreen(book: book, genre: null)),
                       );
                     },
                   ),)

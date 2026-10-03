@@ -13,11 +13,11 @@ import 'package:uuid/uuid.dart';
 
 class BookDetailScreen extends ConsumerStatefulWidget {
   final Book book;
-  final Genre genre;
+  final Genre? genre;
   const BookDetailScreen({
     super.key,
     required this.book,
-    required this.genre,
+    this.genre,
   });
 
   @override

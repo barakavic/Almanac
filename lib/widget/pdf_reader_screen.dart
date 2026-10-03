@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bookshelf/data/models/book.dart';
 import 'package:bookshelf/data/models/chapter.dart';
+import 'package:bookshelf/data/models/genre.dart';
 import 'package:bookshelf/data/providers.dart';
 import 'package:bookshelf/processes/ChapterReader/chapter_extractor.dart';
 import 'package:bookshelf/utils/app_logger.dart';
@@ -23,8 +24,9 @@ const List<double> invertColorMatrix = <double>[
 class PdfReaderScreen extends ConsumerStatefulWidget{
   final Book book;
   final Chapter? chapter;
+  final Genre? genre;
 
-  const PdfReaderScreen({super.key, required this.book, this.chapter});
+  const PdfReaderScreen({super.key, required this.book, this.chapter, this.genre});
   
   @override
   ConsumerState<PdfReaderScreen> createState() => _PdfReaderScreenState();
