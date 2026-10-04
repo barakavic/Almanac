@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:bookshelf/data/database/db_helper.dart';
 import 'package:bookshelf/data/models/book.dart';
 import 'package:bookshelf/data/models/chapter.dart';
+import 'package:bookshelf/data/models/device.dart';
 import 'package:bookshelf/data/models/genre.dart';
 import 'package:bookshelf/data/models/subgenre.dart';
 import 'package:bookshelf/data/models/watched_folder.dart';
@@ -13,6 +16,7 @@ import 'package:bookshelf/data/repository/watched_folder_repository.dart';
 import 'package:bookshelf/utils/device_identity.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:bookshelf/data/repository/pending_transfer_repository.dart';
 import 'package:bookshelf/services/shelf_service.dart';
@@ -94,6 +98,11 @@ final deviceRepositoryProvider = Provider<DeviceRepository>((ref) {
   return DeviceRepository(DbHelper());
 });
 
+final pairedDevicesProvider = FutureProvider<List<Device>>((ref) async {
+  final repo = ref.watch(deviceRepositoryProvider);
+  return repo.getAllDevices();
+});
+
 final watchedFolderRepositoryProvider = Provider<WatchedFolderRepository>((
   ref,
 ) {
@@ -129,4 +138,48 @@ final almanacServerProvider = FutureProvider<AlmanacServer>((ref) async {
   final deviceUuid = await getDeviceFingerprint();
 
   return AlmanacServer(bookRepo, deviceRepo, deviceUuid);
+});
+
+/// Active device filter: null = All, 'local' = this device, deviceid = a specific remote.
+final selectedDeviceIdProvider = StateProvider<String?>((ref) => null);
+
+/// Merges local books with books fetched from all reachable paired devices.
+/// Remote books are tagged with isremote=true and remotedeviceid set.
+/// Unreachable devices are silently skipped.
+final mergedBooksProvider = FutureProvider<List<Book>>((ref) async {
+  final localBooks = await ref.watch(booksProvider.future);
+  final devices = await ref.watch(pairedDevicesProvider.future);
+
+  final remoteBooks = <Book>[];
+
+  await Future.wait(
+    devices.map((device) async {
+      try {
+        final headers = <String, String>{};
+        if (device.pairingcode != null) {
+          headers['x-almanac-token'] = device.pairingcode!;
+        }
+        final uri = Uri.parse(
+            'http://${device.ipaddress}:${device.port}/books');
+        final response = await http
+            .get(uri, headers: headers)
+            .timeout(const Duration(seconds: 3));
+
+        if (response.statusCode == 200) {
+          final List<dynamic> json = jsonDecode(response.body);
+          for (final raw in json) {
+            final book = Book.fromMap(Map<String, dynamic>.from(raw as Map));
+            remoteBooks.add(book.copyWith(
+              isremote: true,
+              remotedeviceid: device.deviceid,
+            ));
+          }
+        }
+      } catch (_) {
+        // Device offline or unreachable — skip silently.
+      }
+    }),
+  );
+
+  return [...localBooks, ...remoteBooks];
 });

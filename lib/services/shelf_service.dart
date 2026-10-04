@@ -74,6 +74,7 @@ class AlmanacServer{
   ){
     _router.get('/health', _healthhandler);
     _router.get('/ping', _pinghandler);
+    _router.get('/books', _bookshandler);
     _router.get('/books/manifest', _bookshandler);
     _router.get('/books/<bookId>/download', _downloadhandler);
     _router.post('/pair', _pairhandler);

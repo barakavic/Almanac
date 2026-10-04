@@ -41,6 +41,48 @@ class Book {
     this.isindexed = 0,
   });
 
+  Book copyWith({
+    String? bookid,
+    String? title,
+    String? author,
+    String? filepath,
+    int? spinecolor,
+    String? genreid,
+    String? subgenreid,
+    int? lastpageread,
+    int? totalpages,
+    bool? isarchived,
+    DateTime? addedat,
+    bool? isremote,
+    String? remotedeviceid,
+    String? deviceid,
+    DateTime? lastopenedat,
+    String? sha256,
+    int? filesizebytes,
+    int? isindexed,
+  }) {
+    return Book(
+      bookid: bookid ?? this.bookid,
+      title: title ?? this.title,
+      author: author ?? this.author,
+      filepath: filepath ?? this.filepath,
+      spinecolor: spinecolor ?? this.spinecolor,
+      genreid: genreid ?? this.genreid,
+      subgenreid: subgenreid ?? this.subgenreid,
+      lastpageread: lastpageread ?? this.lastpageread,
+      totalpages: totalpages ?? this.totalpages,
+      isarchived: isarchived ?? this.isarchived,
+      addedat: addedat ?? this.addedat,
+      isremote: isremote ?? this.isremote,
+      remotedeviceid: remotedeviceid ?? this.remotedeviceid,
+      deviceid: deviceid ?? this.deviceid,
+      lastopenedat: lastopenedat ?? this.lastopenedat,
+      sha256: sha256 ?? this.sha256,
+      filesizebytes: filesizebytes ?? this.filesizebytes,
+      isindexed: isindexed ?? this.isindexed,
+    );
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'bookid': bookid,

@@ -6,6 +6,7 @@ import 'package:bookshelf/data/models/device.dart';
 import 'package:bookshelf/data/providers.dart';
 import 'package:bookshelf/services/sync_service.dart';
 import 'package:bookshelf/ui/devices/device_detail_screen.dart';
+import 'package:bookshelf/ui/devices/devices_library_screen.dart';
 import 'package:bookshelf/ui/devices/pairing_dialog.dart';
 import 'package:bookshelf/ui/folders/watched_folders_screen.dart';
 import 'package:bookshelf/utils/device_identity.dart';
@@ -245,6 +246,16 @@ class _DevicesScreenState extends ConsumerState<DevicesScreen> {
       appBar: AppBar(
         title: const Text('Paired Devices'),
         actions: [
+          IconButton(
+            tooltip: 'Devices Library',
+            icon: const Icon(Icons.auto_stories),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const DevicesLibraryScreen()),
+              );
+            },
+          ),
           IconButton(
             tooltip: 'Library folders',
             icon: const Icon(Icons.folder_open),
