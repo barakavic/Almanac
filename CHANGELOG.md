@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.1.2] - 2026-10-04
+
+### Added
+- Book Details now checks local PDF page count and indexes chapters when opened, so users do not have to enter the in-app reader to trigger extraction.
+- Chapter scanning status and a manual rescan action are available from Book Details. Rescanning asks for confirmation because a successful scan replaces the current chapter list, including manually created chapters.
+- TOC discovery recognizes `Table of Contents`, `Brief Contents`, and common dot, dash, bullet, and spacing variations. It can read entries across consecutive TOC pages and scans up to 100 initial pages for a TOC, then up to 20 pages for its entries.
+- Added consecutive duplicate-heading normalization to the regex fallback so repeated running headers such as `Chapter 8` do not become a separate one-page chapter on every page.
+- Added generated-PDF regression tests for file and open-document crawling, multi-page contents, long prefaces, page ranges, and repeated chapter headers.
+
+### Fixed
+- Persisted PDF total-page counts discovered during Book Details scanning; returning from an external PDF reader can now show the document's actual page count once its Details screen inspects it.
+- Corrected incomplete chapter lists caused by parsing only the first TOC page.
+- Prevented generic repeated PDF headers from inflating the chapter list when the regex-based fallback is used.
+- Added an explicit rescan path for books whose chapter list was already stored, while keeping existing records unless the user confirms replacement.
+
+### Challenges and limitations
+- PDF text extraction does not always preserve the visual layout of TOC leaders and columns. Parsing accepts several common text forms, but unusual line wrapping, column ordering, or formatting may still need a book-specific adjustment.
+- TOC discovery is bounded to the first 100 PDF pages, and continuation parsing is bounded to 20 pages. A contents section beyond those limits may not be fully indexed.
+- Image-only or scanned TOCs are not recognized by text extraction; OCR would be needed to support them.
+- The regex fallback can still mistake non-consecutive chapter-like text for headings. Consecutive normalization addresses repeated running headers, but cannot reliably infer semantic chapter structure from every book layout.
+- A confirmed rescan replaces all existing chapters for that book. Review the confirmation before proceeding if the list contains manually defined chapters.
+- Android verification had a separate environment delay: Gradle built the APK in about 67 seconds, but installation over wireless ADB took about 514 seconds before ADB exited with code `-2`. This was an install/transport issue, not a chapter-scanning build failure; USB or a stable ADB connection is recommended for device verification.
+
+### Verification
+- `flutter test test/toc_crawler_test.dart test/regex_extractor_test.dart` passed.
+- Targeted Flutter analysis found no errors in the chapter crawler, extractor, persistence, and details-screen changes; existing informational lints remain.
+
 ## [0.1.1] - 2026-09-16
 
 ### Added
