@@ -1,9 +1,7 @@
 import 'package:bookshelf/data/models/book.dart';
 import 'package:bookshelf/widget/book_detail_screen.dart';
-import 'package:bookshelf/widget/pdf_reader_screen.dart';
 import 'package:bookshelf/widget/reassign_book_sheet.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/src/widgets/framework.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class BookActionsSheet extends ConsumerWidget{

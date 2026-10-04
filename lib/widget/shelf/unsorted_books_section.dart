@@ -2,7 +2,6 @@ import 'package:bookshelf/data/models/book.dart';
 import 'package:bookshelf/data/models/genre.dart';
 import 'package:bookshelf/widget/book_detail_screen.dart';
 import 'package:bookshelf/widget/book_spine.dart';
-import 'package:bookshelf/widget/pdf_reader_screen.dart';
 import 'package:flutter/material.dart';
 
 class UnsortedBooksSection extends StatelessWidget {
